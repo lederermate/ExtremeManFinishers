@@ -331,3 +331,13 @@ body { font-size: 16px; }
 .hero-lead { margin-top: 18px; }
 .footer-years { line-height: 1.9; }
 .footer-years a { margin-right: 6px; }
+/* előzések panel */
+.pass-panel { margin-top: 10px; border-top: 1px solid var(--grid); padding-top: 12px; }
+.pass-panel p { margin: 6px 0; line-height: 1.7; }
+.pass-head { margin-bottom: 4px; }
+.pass-head .muted { margin-left: 8px; font-size: 14px; }
+.pass-up, .pass-down { display: inline-block; font-weight: 600; margin-right: 8px; }
+.pass-up { color: var(--good); }
+.pass-down { color: var(--accent-ink); }
+.split-explain { margin: -4px 0 10px; }
+.split-best-sample { color: var(--accent-ink); font-weight: 600; font-variant-numeric: tabular-nums; }

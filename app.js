@@ -223,6 +223,12 @@
         y1 = Math.ceil((y1 + span * 0.06) / step) * step;
         if (opts.kind === 'pct') { y0 = Math.max(0, y0); y1 = Math.min(100, y1); }
       }
+      const clamped = opts.yMin != null && y0 < opts.yMin;
+      if (clamped) y0 = opts.yMin;
+      const yTicks = clamped ? [y0] : [];
+      for (let v = Math.ceil(y0 / step) * step; v <= y1 + 1e-6; v += step) {
+        if (!clamped || v - y0 >= step * 0.75) yTicks.push(v);
+      }
       const sx = (x) => m.l + ((x - x0) / (x1 - x0)) * iw;
       const sy = opts.invert
         ? (v) => m.t + ((v - y0) / (y1 - y0)) * ih
@@ -240,7 +246,7 @@
         }
       }
       // rácsvonalak + y címkék
-      for (let v = y0; v <= y1 + 1e-6; v += step) {
+      for (const v of yTicks) {
         const y = Math.round(sy(v)) + 0.5;
         svg.append(svgEl('line', { class: 'gridline', x1: m.l, x2: W - m.r, y1: y, y2: y }));
         const t = svgEl('text', { class: 'tick', x: m.l - 8, y: y + 4, 'text-anchor': 'end' });
@@ -549,7 +555,7 @@
   // ------------------------------------------------------------------
   // Nézet: versenyző adatlap
   // ------------------------------------------------------------------
-  function renderAthlete(id) {
+  function renderAthlete(id, focusYear = null) {
     const a = M.A.get(id);
     if (!a || !a.res.length) return renderNotFound('Nincs ilyen versenyző.');
     const lastR = a.res[a.count - 1];
@@ -603,7 +609,9 @@
         </div>
         <div id="lapBody"><div class="loading" style="padding:40px 0"><span class="spinner"></span> Köridők betöltése…</div></div>
       </section>` : ''}
-      ${splitYears.length ? `<section class="card"><div class="card-head"><div><h2>Részidők</h2><p>Úszás 3,8 km · kerékpár 180 km · futás 42,2 km. Az idő alatt a szakaszhelyezés; kiemelve a legjobb.</p></div></div>
+      ${splitYears.length ? `<section class="card"><div class="card-head"><div><h2>Részidők</h2><p>Úszás 3,8 km · kerékpár 180 km · futás 42,2 km.</p></div></div>
+        <p class="chart-note split-explain"><span class="split-best-sample">1:19:33</span> piros = a versenyző saját legjobbja az adott szakaszon (a részidős évek közül).
+          Az idő alatti kis szám a szakaszhelyezés a mezőnyben, pl. <span class="num">57. / 279</span>: 279 célba érkezőből az 57. leggyorsabb.</p>
         ${splitTable(splitYears)}</section>` : ''}
       <section class="card">
         <div class="card-head"><h2>Eredmények</h2></div>
@@ -662,7 +670,10 @@
     };
     if (splitYears.length) {
       const drawLaps = (year) => renderLaps(document.getElementById('lapBody'), a, year);
-      drawLaps(splitYears[splitYears.length - 1].year);
+      const startYear = splitYears.some((r) => r.year === focusYear) ? focusYear : splitYears[splitYears.length - 1].year;
+      document.querySelectorAll('#lapSeg button').forEach((x) => x.classList.toggle('active', Number(x.dataset.y) === startYear));
+      drawLaps(startYear);
+      if (focusYear) setTimeout(() => document.getElementById('lapCard')?.scrollIntoView({ block: 'start' }), 60);
       document.getElementById('lapSeg').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -859,7 +870,8 @@
       <p class="chart-note">Vízszintesen a megtett táv (km); minden pont egy mérőszakasz átlaga.${withMedian ? '' : ' Ehhez az évhez nincs elég mezőny-adat a medián vonalhoz.'}</p>
       <h3 style="font-size:15px;margin:22px 0 2px">A verseny lefolyása</h3>
       <p class="chart-note" style="margin:0 0 6px">Helyezés ${sexWord} az egyes mérőpontokon, az eltelt idő függvényében (feljebb = előrébb).</p>
-      <div class="chart" id="lap-race"></div>`;
+      <div class="chart" id="lap-race"></div>
+      <div class="pass-panel" id="passPanel"></div>`;
 
     for (const sp of specs) {
       const gs = groups(sp.disc);
@@ -904,10 +916,46 @@
       { x0: firstOf('run'), x1: end, label: 'Futás', fill: 'color-mix(in srgb, var(--s3) 9%, transparent)' },
     ].filter((b) => b.x1 != null);
     const ranks = race.map((p) => p.y);
+    // Előzések két egymást követő mérőpont között: az azonos nemű célba érkezők
+    // közül ki volt előtted az előző ponton és mögötted ezen (megelőzted), ill. fordítva.
+    const rivals = Object.entries(d.athletes).filter(([aid]) => Number(aid) !== a.id &&
+      (!a.sex || (M.A.get(Number(aid)) || {}).sex === a.sex));
+    const passes = race.map((p, k) => {
+      if (!k) return null;
+      const ip = race[k - 1].i, i = p.i;
+      const me0 = mine[ip][0], me1 = mine[i][0];
+      const up = [], down = [];
+      for (const [aid, o] of rivals) {
+        const t0 = o[ip] && o[ip][0], t1 = o[i] && o[i][0];
+        if (t0 == null || t1 == null) continue;
+        if (t0 < me0 && t1 > me1) up.push({ aid: Number(aid), t: t1 });
+        else if (t0 > me0 && t1 < me1) down.push({ aid: Number(aid), t: t1 });
+      }
+      up.sort((x, y) => x.t - y.t); down.sort((x, y) => x.t - y.t);
+      return { from: P[ip].label, to: P[i].label, up, down };
+    });
+    const panel = document.getElementById('passPanel');
+    const nameLink = (x) => {
+      const o = M.A.get(x.aid);
+      return o ? `<a href="#/versenyzo/${o.id}/${year}">${esc(o.name)}</a>` : '';
+    };
+    const showPasses = (k) => {
+      const ps = passes[k];
+      if (!ps) { panel.innerHTML = '<p class="chart-note">Kattints a grafikon egy pontjára: megmutatom, kiket előztél meg az előző mérőpont óta, és kik előztek meg.</p>'; return; }
+      panel.innerHTML = `<div class="pass-head"><b>${esc(ps.from)} → ${esc(ps.to)}</b>
+          <span class="muted">${fmt(mine[race[k - 1].i][0])} → ${fmt(mine[race[k].i][0])} · helyezés ${race[k - 1].y}. → ${race[k].y}.</span></div>
+        <p><span class="pass-up">▲ Megelőzted (${ps.up.length})</span>${ps.up.length ? ps.up.map(nameLink).join(', ') : '<span class="muted">senkit</span>'}</p>
+        <p><span class="pass-down">▼ Megelőzött (${ps.down.length})</span>${ps.down.length ? ps.down.map(nameLink).join(', ') : '<span class="muted">senki</span>'}</p>
+        <p class="chart-note">Az azonos nemű célba érkezők köztes ideje alapján; a nevekre kattintva az ő ugyanezen évi (${year}) versenyük nyílik meg. Másik szakaszhoz kattints egy másik pontra.</p>`;
+    };
+    // kezdetben a legtöbb előzéssel járó szakasz látszik
+    let startK = 0;
+    passes.forEach((ps, k) => { if (ps && ps.up.length + ps.down.length > ((passes[startK] || { up: [], down: [] }).up.length + (passes[startK] || { up: [], down: [] }).down.length)) startK = k; });
+    showPasses(startK);
     const hrs = [];
     for (let h = 0; h <= Math.ceil(end); h += end > 12 ? 3 : 2) hrs.push(h);
     lineChart(document.getElementById('lap-race'), {
-      kind: 'num', invert: true, height: 260, yFmt: (v) => `${Math.round(v)}.`, minSpan: 10,
+      kind: 'num', invert: true, height: 260, yFmt: (v) => `${Math.round(v)}.`, minSpan: 10, yMin: 1,
       xDomain: [0, Math.max(end, 1)], xTicks: hrs, xFmt: (h) => `${h} ó`, bands,
       series: [{ name: a.name, color: 'var(--ink-2)', points: race }],
       annotate: race.length > 1 ? [
@@ -920,11 +968,15 @@
         if (k < 0) return null;
         const p = race[k], prev = race[k - 1];
         const diff = prev ? prev.y - p.y : 0;
+        const ps = passes[k];
         return `<div class="tt-title">${esc(P[p.i].label)}</div>
           ${ttRow('Eltelt idő', fmt(mine[p.i][0]))}
           ${ttRow('Helyezés', `${p.y}.`)}
-          ${prev ? ttRow('Változás', diff > 0 ? `+${diff} hely` : diff < 0 ? `−${-diff} hely` : '±0') : ''}`;
+          ${prev ? ttRow('Változás', diff > 0 ? `+${diff} hely` : diff < 0 ? `−${-diff} hely` : '±0') : ''}
+          ${ps ? ttRow('Megelőzted / megelőzött', `${ps.up.length} / ${ps.down.length}`) : ''}
+          ${ps ? '<div class="tt-row"><span class="muted">kattints a nevekért</span></div>' : ''}`;
       },
+      onClick: (x) => { const k = race.findIndex((q) => q.x === x); if (k >= 0) showPasses(k); },
     });
   }
 
@@ -1155,13 +1207,13 @@
   function route() {
     resetView();
     $hero.innerHTML = '';
-    const [view, arg] = currentRoute();
+    const [view, arg, arg2] = currentRoute();
     const navKey = { versenyzo: 'list', '': 'list', evek: 'years', ev: 'years', rekordok: 'records' }[view || ''] || 'list';
     document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navKey));
     // a címek egyeznek a build_pages.py által generált statikus oldalakéval (SEO)
     let title = 'eXtremeMan Nagyatád finisherek – eredmények 1990 óta';
     if (view === 'versenyzo') {
-      renderAthlete(Number(arg));
+      renderAthlete(Number(arg), Number(arg2) || null);
       const a = M.A.get(Number(arg));
       if (a) title = `${a.name} – eXtremeMan Nagyatád eredmények`;
     } else if (view === 'ev') { renderYear(Number(arg)); title = `eXtremeMan Nagyatád ${arg} eredmények – teljes táv`; }
@@ -1170,7 +1222,7 @@
     else { renderList(); }
     document.title = title;
     if (!view && listState.scroll) { window.scrollTo(0, listState.scroll); listState.scroll = 0; }
-    else window.scrollTo(0, 0);
+    else if (!(view === 'versenyzo' && arg2)) window.scrollTo(0, 0);
   }
 
   // téma váltó
