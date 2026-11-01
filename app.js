@@ -1,0 +1,856 @@
+/* eXtremeMan Nagyatád – finisherek
+ * Statikus egyoldalas alkalmazás: adat Supabase-ből (vagy a beépített
+ * data/finishers.json pillanatképből), nézetek hash alapú útválasztással:
+ *   #/                 versenyzőlista (ABC, keresés, rendezés)
+ *   #/versenyzo/<id>   versenyző adatlap trendgrafikonnal
+ *   #/evek             évek áttekintése
+ *   #/ev/<év>          egy év eredménylistája
+ *   #/rekordok         toplisták
+ */
+(() => {
+  'use strict';
+
+  const CFG = window.FINISHERS_CONFIG || {};
+  const $app = document.getElementById('app');
+  const $tt = document.getElementById('tooltip');
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  // ------------------------------------------------------------------
+  // Segédfüggvények
+  // ------------------------------------------------------------------
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const fmt = (s) => {
+    if (s == null || !isFinite(s)) return '–';
+    s = Math.round(s);
+    return `${Math.floor(s / 3600)}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}`;
+  };
+  const fmtHM = (s) => `${Math.floor(s / 3600)}:${pad2(Math.round((s % 3600) / 60) % 60)}`;
+  const fmtDiff = (d) => (Math.round(d) === 0 ? '±0:00' : (d < 0 ? '−' : '+') + fmtShortDur(Math.abs(d)));
+  const fmtShortDur = (s) => {
+    s = Math.round(s);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return h ? `${h}:${pad2(m)}:${pad2(x)}` : `${m}:${pad2(x)}`;
+  };
+  const nf = new Intl.NumberFormat('hu-HU');
+  const coll = new Intl.Collator('hu', { sensitivity: 'base' });
+  const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const median = (arr) => {
+    if (!arr.length) return null;
+    const a = [...arr].sort((x, y) => x - y), m = a.length >> 1;
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  };
+  const lowerBound = (sorted, v) => {
+    let lo = 0, hi = sorted.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] < v) lo = mid + 1; else hi = mid; }
+    return lo;
+  };
+  const pct = (r) => (r.pos / r.y.n) * 100;
+  const pctLabel = (p) => (p < 1 ? '<1%' : `${Math.round(p)}%`);
+  const svgEl = (tag, attrs = {}) => {
+    const e = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  };
+  const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+  // ------------------------------------------------------------------
+  // Adatok betöltése és feldolgozása
+  // ------------------------------------------------------------------
+  async function fetchData() {
+    if (CFG.supabaseUrl && CFG.supabaseKey) {
+      try {
+        const headers = { 'Content-Type': 'application/json', apikey: CFG.supabaseKey };
+        if (CFG.supabaseKey.startsWith('eyJ')) headers.Authorization = `Bearer ${CFG.supabaseKey}`;
+        const res = await fetch(`${CFG.supabaseUrl.replace(/\/+$/, '')}/rest/v1/rpc/finisher_data`, {
+          method: 'POST', headers, body: '{}',
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        if (!d || !Array.isArray(d.results) || !d.results.length) throw new Error('üres adat');
+        return { d, source: 'supabase' };
+      } catch (e) {
+        console.warn('A Supabase nem elérhető, a beépített pillanatkép töltődik be.', e);
+        const res = await fetch('data/finishers.json');
+        return { d: await res.json(), source: 'fallback' };
+      }
+    }
+    const res = await fetch('data/finishers.json');
+    return { d: await res.json(), source: 'snapshot' };
+  }
+
+  const DISC = [
+    { k: 'swim', label: 'Úszás', cls: 'sw', color: 'var(--s1)' },
+    { k: 'bike', label: 'Kerékpár', cls: 'bk', color: 'var(--s2)' },
+    { k: 'run', label: 'Futás', cls: 'rn', color: 'var(--s3)' },
+    { k: 'tr', label: 'Depók', cls: 'tr', color: 'var(--s4)' },
+  ];
+
+  function buildModel(d) {
+    const A = new Map();
+    for (const [id, name, by, sex] of d.athletes) {
+      A.set(id, { id, name, by, sex, res: [], key: fold(name) });
+    }
+    const Y = new Map();
+    for (const [aid, year, pos, t, swim, t1, bike, t2, run, club] of d.results) {
+      const a = A.get(aid);
+      if (!a) continue;
+      const tr = t1 != null || t2 != null ? (t1 || 0) + (t2 || 0) : null;
+      const r = { a, year, pos, t, swim, t1, bike, t2, run, tr, club };
+      a.res.push(r);
+      if (!Y.has(year)) Y.set(year, { year, res: [] });
+      Y.get(year).res.push(r);
+    }
+    for (const y of Y.values()) {
+      y.res.sort((p, q) => p.t - q.t || (p.pos ?? 1e9) - (q.pos ?? 1e9));
+      y.res.forEach((r, i) => { r.y = y; if (r.pos == null) r.pos = i + 1; });
+      y.res.sort((p, q) => p.pos - q.pos);
+      y.n = y.res.length;
+      y.winner = y.res[0];
+      y.median = median(y.res.map((r) => r.t));
+      y.last = y.res[y.n - 1];
+      y.hasSplits = y.res.some((r) => r.swim != null);
+      if (y.hasSplits) {
+        y.split = {};
+        for (const dd of DISC) {
+          const vals = y.res.map((r) => r[dd.k]).filter((v) => v != null).sort((p, q) => p - q);
+          y.split[dd.k] = { sorted: vals, median: median(vals) };
+        }
+      }
+    }
+    const athletes = [];
+    for (const a of A.values()) {
+      if (!a.res.length) continue;
+      a.res.sort((p, q) => p.year - q.year);
+      a.res.forEach((r, i) => { r.nth = i + 1; });
+      a.count = a.res.length;
+      a.bestRes = a.res.reduce((b, r) => (r.t < b.t ? r : b));
+      a.best = a.bestRes.t;
+      a.first = a.res[0].year;
+      a.last = a.res[a.count - 1].year;
+      a.club = [...a.res].reverse().find((r) => r.club)?.club || null;
+      const L = fold(a.name).replace(/[^a-z]/g, '').charAt(0).toUpperCase();
+      a.letter = L || '#';
+      // leghosszabb egymást követő évekből álló sorozat
+      let streak = 1, best = 1, bestEnd = a.first;
+      for (let i = 1; i < a.count; i++) {
+        streak = a.res[i].year === a.res[i - 1].year + 1 ? streak + 1 : 1;
+        if (streak > best) { best = streak; bestEnd = a.res[i].year; }
+      }
+      a.streak = best;
+      a.streakEnd = bestEnd;
+      athletes.push(a);
+    }
+    for (const y of Y.values()) y.rookies = y.res.filter((r) => r.a.first === y.year).length;
+    const years = [...Y.values()].sort((p, q) => p.year - q.year);
+    return { A, Y, athletes, years, results: d.results.length };
+  }
+
+  let M = null; // modell
+  let source = '';
+
+  // ------------------------------------------------------------------
+  // Tooltip
+  // ------------------------------------------------------------------
+  function showTip(html, x, y) {
+    $tt.innerHTML = html;
+    $tt.hidden = false;
+    const w = $tt.offsetWidth, h = $tt.offsetHeight;
+    let left = x + 14, top = y - h - 12;
+    if (left + w > window.innerWidth - 8) left = x - w - 14;
+    if (left < 8) left = 8;
+    if (top < 8) top = y + 16;
+    $tt.style.left = `${left}px`;
+    $tt.style.top = `${top}px`;
+  }
+  const hideTip = () => { $tt.hidden = true; };
+  const ttRow = (label, value, color) =>
+    `<div class="tt-row"><span class="tt-key">${color ? `<i class="key-line" style="background:${color}"></i>` : ''}${esc(label)}</span><b>${value}</b></div>`;
+
+  // ------------------------------------------------------------------
+  // Grafikonok (saját SVG)
+  // ------------------------------------------------------------------
+  function niceTimeStep(range, target = 5) {
+    const steps = [60, 120, 300, 600, 900, 1200, 1800, 3600, 5400, 7200, 10800, 14400];
+    return steps.find((s) => range / s <= target) || 14400;
+  }
+  function niceNumStep(range, target = 5) {
+    const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= raw) return m * p;
+    return 10 * p;
+  }
+
+  /** Vonaldiagram, évek az x tengelyen.
+   * opts: { series:[{name,color,points:[{x,y}],width?,endLabel?}], invert, kind:'time'|'pct',
+   *         tip:(x)=>html|null, annotate:[{x,y,text}], ariaLabel, yDomain? } */
+  function lineChart(el, opts) {
+    const draw = () => {
+      el.innerHTML = '';
+      const W = Math.max(280, el.clientWidth), H = W < 520 ? 240 : 300;
+      const m = { t: 22, r: opts.series.some((s) => s.endLabel) ? 64 : 16, b: 28, l: 52 };
+      const iw = W - m.l - m.r, ih = H - m.t - m.b;
+      const all = opts.series.flatMap((s) => s.points);
+      const xs = [...new Set(all.map((p) => p.x))].sort((a, b) => a - b);
+      let x0 = xs[0], x1 = xs[xs.length - 1];
+      if (x0 === x1) { x0 -= 1; x1 += 1; }
+      let y0, y1, step;
+      if (opts.yDomain) {
+        [y0, y1] = opts.yDomain;
+        step = opts.kind === 'pct' ? 25 : niceTimeStep(y1 - y0);
+      } else {
+        const ys = all.map((p) => p.y);
+        y0 = Math.min(...ys); y1 = Math.max(...ys);
+        const span = Math.max(y1 - y0, opts.kind === 'time' ? 1800 : 10);
+        step = opts.kind === 'time' ? niceTimeStep(span) : niceNumStep(span);
+        y0 = Math.floor((y0 - span * 0.06) / step) * step;
+        y1 = Math.ceil((y1 + span * 0.06) / step) * step;
+        if (opts.kind === 'pct') { y0 = Math.max(0, y0); y1 = Math.min(100, y1); }
+      }
+      const sx = (x) => m.l + ((x - x0) / (x1 - x0)) * iw;
+      const sy = opts.invert
+        ? (v) => m.t + ((v - y0) / (y1 - y0)) * ih
+        : (v) => m.t + ih - ((v - y0) / (y1 - y0)) * ih;
+
+      const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opts.ariaLabel || '' });
+      // rácsvonalak + y címkék
+      for (let v = y0; v <= y1 + 1e-6; v += step) {
+        const y = Math.round(sy(v)) + 0.5;
+        svg.append(svgEl('line', { class: 'gridline', x1: m.l, x2: W - m.r, y1: y, y2: y }));
+        const t = svgEl('text', { class: 'tick', x: m.l - 8, y: y + 4, 'text-anchor': 'end' });
+        t.textContent = opts.kind === 'time' ? fmtHM(v) : `${Math.round(v)}%`;
+        svg.append(t);
+      }
+      // x tengely
+      const by = H - m.b + 0.5;
+      svg.append(svgEl('line', { class: 'baseline', x1: m.l, x2: W - m.r, y1: by, y2: by }));
+      const span = x1 - x0, maxLabels = Math.max(2, Math.floor(iw / 44));
+      const xStep = [1, 2, 5, 10].find((s) => span / s <= maxLabels) || 10;
+      for (let x = Math.ceil(x0 / xStep) * xStep; x <= x1; x += xStep) {
+        const t = svgEl('text', { class: 'tick', x: sx(x), y: H - m.b + 17, 'text-anchor': 'middle' });
+        t.textContent = x;
+        svg.append(t);
+      }
+      // sorozatok
+      for (const s of opts.series) {
+        if (s.points.length > 1) {
+          const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
+          svg.append(svgEl('path', { class: 'line', d, style: `stroke:${s.color}` }));
+        }
+        if (s.dots !== false) {
+          for (const p of s.points) {
+            svg.append(svgEl('circle', { cx: sx(p.x), cy: sy(p.y), r: W < 520 && s.points.length > 15 ? 3 : 4, style: `fill:${s.color};stroke:var(--surface);stroke-width:2` }));
+          }
+        }
+        if (s.endLabel && s.points.length) {
+          const p = s.points[s.points.length - 1];
+          const t = svgEl('text', { class: 'dlabel', x: sx(p.x) + 8, y: sy(p.y) + 4 });
+          t.textContent = s.endLabel;
+          svg.append(t);
+        }
+      }
+      // kiemelt pontok feliratai
+      for (const a of opts.annotate || []) {
+        const px = sx(a.x), py = sy(a.y);
+        const above = py - m.t > 26;
+        const anchor = px < m.l + 50 ? 'start' : px > W - m.r - 50 ? 'end' : 'middle';
+        const t = svgEl('text', { class: 'dlabel', x: px, y: above ? py - 12 : py + 22, 'text-anchor': anchor });
+        t.textContent = a.text;
+        svg.append(t);
+      }
+      // hover réteg
+      const cross = svgEl('line', { class: 'crosshair', y1: m.t, y2: H - m.b, visibility: 'hidden' });
+      const halo = svgEl('circle', { r: 6, visibility: 'hidden', style: 'fill:none;stroke-width:2' });
+      svg.append(cross, halo);
+      const hit = svgEl('rect', { class: 'hit', x: m.l - 10, y: 0, width: iw + 20, height: H });
+      svg.append(hit);
+      const primary = opts.series[opts.primary ?? 0];
+      const onMove = (ev) => {
+        const rect = svg.getBoundingClientRect();
+        const px = ((ev.clientX - rect.left) / rect.width) * W;
+        let best = null, bd = Infinity;
+        for (const x of xs) { const dd = Math.abs(sx(x) - px); if (dd < bd) { bd = dd; best = x; } }
+        if (best == null) return;
+        const html = opts.tip(best);
+        if (!html) { hideTip(); return; }
+        cross.setAttribute('x1', sx(best)); cross.setAttribute('x2', sx(best));
+        cross.setAttribute('visibility', 'visible');
+        const pp = primary.points.find((p) => p.x === best);
+        if (pp) {
+          halo.setAttribute('cx', sx(pp.x)); halo.setAttribute('cy', sy(pp.y));
+          halo.setAttribute('style', `fill:none;stroke-width:2;stroke:${primary.color}`);
+          halo.setAttribute('visibility', 'visible');
+        } else halo.setAttribute('visibility', 'hidden');
+        showTip(html, ev.clientX, ev.clientY);
+      };
+      const onLeave = () => { cross.setAttribute('visibility', 'hidden'); halo.setAttribute('visibility', 'hidden'); hideTip(); };
+      hit.addEventListener('pointermove', onMove);
+      hit.addEventListener('pointerdown', onMove);
+      hit.addEventListener('pointerleave', onLeave);
+      if (opts.onClick) hit.addEventListener('click', (ev) => {
+        const rect = svg.getBoundingClientRect();
+        const px = ((ev.clientX - rect.left) / rect.width) * W;
+        let best = null, bd = Infinity;
+        for (const x of xs) { const dd = Math.abs(sx(x) - px); if (dd < bd) { bd = dd; best = x; } }
+        if (best != null) opts.onClick(best);
+      });
+      el.append(svg);
+    };
+    draw();
+    observeResize(el, draw);
+  }
+
+  /** Oszlopdiagram. items: [{label, value, tip, onClick?}] */
+  function columnChart(el, items, opts = {}) {
+    const draw = () => {
+      el.innerHTML = '';
+      const W = Math.max(280, el.clientWidth), H = opts.height || (W < 520 ? 200 : 240);
+      const m = { t: 20, r: 8, b: 28, l: 40 };
+      const iw = W - m.l - m.r, ih = H - m.t - m.b;
+      const max = Math.max(...items.map((i) => i.value), 1);
+      const step = niceNumStep(max, 4), top = Math.ceil(max / step) * step;
+      const band = iw / items.length, bw = Math.min(24, Math.max(2, band - 2));
+      const sy = (v) => m.t + ih - (v / top) * ih;
+      const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opts.ariaLabel || '' });
+      for (let v = 0; v <= top; v += step) {
+        const y = Math.round(sy(v)) + 0.5;
+        svg.append(svgEl('line', { class: v === 0 ? 'baseline' : 'gridline', x1: m.l, x2: W - m.r, y1: y, y2: y }));
+        const t = svgEl('text', { class: 'tick', x: m.l - 8, y: y + 4, 'text-anchor': 'end' });
+        t.textContent = nf.format(v);
+        svg.append(t);
+      }
+      const every = Math.max(1, Math.ceil(items.length / Math.floor(iw / 40)));
+      const labelEvery = opts.labelEvery ? Math.max(every, opts.labelEvery) : every;
+      const bars = [];
+      items.forEach((it, i) => {
+        const x = m.l + band * i + (band - bw) / 2, y = sy(it.value), h = m.t + ih - y;
+        if (h > 0) {
+          const r = Math.min(4, bw / 2, h);
+          const d = `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y + r}V${y + h}Z`;
+          const cls = opts.highlight == null ? 'colbar' : i === opts.highlight ? 'colbar' : 'colbar other';
+          const p = svgEl('path', { class: cls, d });
+          svg.append(p);
+          bars.push(p);
+        } else bars.push(null);
+        if (i % labelEvery === 0) {
+          const t = svgEl('text', { class: 'tick', x: x + bw / 2, y: H - m.b + 17, 'text-anchor': 'middle' });
+          t.textContent = it.label;
+          svg.append(t);
+        }
+        if (it.valueLabel) {
+          const t = svgEl('text', { class: 'dlabel', x: x + bw / 2, y: y - 6, 'text-anchor': 'middle' });
+          t.textContent = it.valueLabel;
+          svg.append(t);
+        }
+      });
+      // hover: a teljes sáv a célterület
+      items.forEach((it, i) => {
+        const hit = svgEl('rect', { class: 'hit', x: m.l + band * i, y: m.t, width: band, height: ih, style: it.onClick ? 'cursor:pointer' : '' });
+        hit.addEventListener('pointermove', (ev) => {
+          bars.forEach((b, j) => b && b.classList.toggle('dim', j !== i));
+          showTip(it.tip, ev.clientX, ev.clientY);
+        });
+        hit.addEventListener('pointerleave', () => { bars.forEach((b) => b && b.classList.remove('dim')); hideTip(); });
+        if (it.onClick) hit.addEventListener('click', it.onClick);
+        svg.append(hit);
+      });
+      el.append(svg);
+    };
+    draw();
+    observeResize(el, draw);
+  }
+
+  /** Egy év célidői félórás sávokban. */
+  function histBins(y) {
+    const BIN = 1800;
+    const lo = Math.floor(y.winner.t / BIN) * BIN, hi = Math.floor(y.last.t / BIN) * BIN;
+    const bins = [];
+    for (let s = lo; s <= hi; s += BIN) bins.push({ s, e: s + BIN, n: 0 });
+    for (const r of y.res) bins[Math.floor((r.t - lo) / BIN)].n++;
+    return bins;
+  }
+  const binIndex = (bins, t) => bins.findIndex((b) => t >= b.s && t < b.e);
+
+  function sparkline(a) {
+    const W = 110, H = 28, p = 4;
+    if (a.count < 2) {
+      return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><circle cx="${W / 2}" cy="${H / 2}" r="3" style="fill:var(--s1)"/></svg>`;
+    }
+    const x0 = a.first, x1 = a.last;
+    const ts = a.res.map((r) => r.t), lo = Math.min(...ts), hi = Math.max(...ts), span = Math.max(hi - lo, 600);
+    const sx = (x) => p + ((x - x0) / (x1 - x0)) * (W - 2 * p);
+    const sy = (t) => p + ((t - lo) / span) * (H - 2 * p); // feljebb = gyorsabb
+    const d = a.res.map((r, i) => `${i ? 'L' : 'M'}${sx(r.year).toFixed(1)},${sy(r.t).toFixed(1)}`).join('');
+    const b = a.bestRes;
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${d}" style="fill:none;stroke:var(--ref);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round"/><circle cx="${sx(b.year).toFixed(1)}" cy="${sy(b.t).toFixed(1)}" r="3" style="fill:var(--s1)"/></svg>`;
+  }
+
+  // átméretezéskor újrarajzolás (nézetváltáskor a régi figyelők törlődnek)
+  let observers = [];
+  function observeResize(el, draw) {
+    let w = el.clientWidth;
+    const ro = new ResizeObserver(debounce(() => {
+      if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; draw(); }
+    }, 120));
+    ro.observe(el);
+    observers.push(ro);
+  }
+  function resetView() {
+    observers.forEach((o) => o.disconnect());
+    observers = [];
+    if (listObserver) { listObserver.disconnect(); listObserver = null; }
+    hideTip();
+  }
+
+  // ------------------------------------------------------------------
+  // Nézet: versenyzőlista
+  // ------------------------------------------------------------------
+  const listState = { q: '', letter: '', sort: 'name', scroll: 0 };
+  let listObserver = null;
+  const SORTS = {
+    name: { label: 'Név szerint (A–Z)', fn: (a, b) => coll.compare(a.name, b.name) },
+    count: { label: 'Célba érések száma', fn: (a, b) => b.count - a.count || coll.compare(a.name, b.name) },
+    best: { label: 'Legjobb idő', fn: (a, b) => a.best - b.best },
+    last: { label: 'Legutóbbi célba érés', fn: (a, b) => b.last - a.last || coll.compare(a.name, b.name) },
+  };
+
+  function tile(label, value, sub) {
+    return `<div class="tile"><div class="label">${label}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+  }
+
+  function renderList() {
+    const { athletes, years } = M;
+    const firstY = years[0].year, lastY = years[years.length - 1].year;
+    const rec = years.reduce((b, y) => (y.winner.t < b.t ? y.winner : b), years[0].winner);
+    const letters = [...new Set(athletes.map((a) => a.letter))].sort(coll.compare);
+    $app.innerHTML = `
+      <div class="page-head">
+        <h1>Finisherek</h1>
+        <p class="lead">Mindenki, aki ${firstY} óta teljes távon célba ért Nagyatádon. Kattints egy névre az eredményekért és a személyes trendgrafikonért.</p>
+      </div>
+      <div class="tiles">
+        ${tile('Finisherek', nf.format(athletes.length), 'különböző versenyző')}
+        ${tile('Célba érések', nf.format(M.results), `${years.length} versenyen`)}
+        ${tile(`${lastY}. évi célba érkezők`, nf.format(years[years.length - 1].n), `ebből ${years[years.length - 1].rookies} új finisher`)}
+        ${tile('Pályacsúcs', fmt(rec.t), `<a href="#/versenyzo/${rec.a.id}">${esc(rec.a.name)}</a>, ${rec.year}`)}
+      </div>
+      <div class="controls">
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 0 1 6.3 12.9l5.4 5.4-1.4 1.4-5.4-5.4A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/></svg>
+          <span class="sr-only">Keresés névre</span>
+          <input id="q" type="search" placeholder="Keresés névre…" autocomplete="off" value="${esc(listState.q)}">
+        </label>
+        <label><span class="sr-only">Rendezés</span>
+          <select id="sort">${Object.entries(SORTS).map(([k, s]) => `<option value="${k}"${k === listState.sort ? ' selected' : ''}>${s.label}</option>`).join('')}</select>
+        </label>
+      </div>
+      <div class="letters" role="group" aria-label="Kezdőbetű">
+        <button type="button" data-l="" class="${listState.letter ? '' : 'active'}">Mind</button>
+        ${letters.map((l) => `<button type="button" data-l="${l}" class="${l === listState.letter ? 'active' : ''}">${l}</button>`).join('')}
+      </div>
+      <p class="count-line" id="countLine"></p>
+      <div class="list" id="list">
+        <div class="list-head"><span>Versenyző</span><span class="c-spark">Idők alakulása</span><span class="r">Célba</span><span class="r">Legjobb</span></div>
+        <div id="rows"></div>
+        <div class="sentinel" id="sentinel"></div>
+      </div>`;
+
+    const $q = document.getElementById('q');
+    const $rows = document.getElementById('rows');
+    const $count = document.getElementById('countLine');
+    let filtered = [], shown = 0;
+
+    const rowHtml = (a) => `
+      <a class="row" href="#/versenyzo/${a.id}">
+        <div><div class="name">${esc(a.name)}</div>
+          <div class="meta">${a.by ? `${a.by} · ` : ''}${a.first === a.last ? a.first : `${a.first}–${a.last}`}</div></div>
+        ${sparkline(a)}
+        <div class="cnt num">${a.count}×</div>
+        <div class="best num">${fmt(a.best)}<small>${a.bestRes.year}</small></div>
+      </a>`;
+
+    const more = () => {
+      if (shown >= filtered.length) return;
+      const next = filtered.slice(shown, shown + 60);
+      $rows.insertAdjacentHTML('beforeend', next.map(rowHtml).join(''));
+      shown += next.length;
+    };
+
+    const apply = () => {
+      const tokens = fold(listState.q.trim()).split(/\s+/).filter(Boolean);
+      filtered = athletes.filter((a) =>
+        (!listState.letter || a.letter === listState.letter) && tokens.every((t) => a.key.includes(t)));
+      filtered.sort(SORTS[listState.sort].fn);
+      $count.textContent = `${nf.format(filtered.length)} versenyző`;
+      $rows.innerHTML = filtered.length ? '' : '<div class="empty">Nincs találat.</div>';
+      shown = 0;
+      more();
+      while (shown < Math.min(filtered.length, 60 * Math.ceil((listState.restore || 0) / 60))) more();
+      listState.restore = 0;
+    };
+
+    $q.addEventListener('input', debounce(() => { listState.q = $q.value; apply(); }, 120));
+    document.getElementById('sort').addEventListener('change', (e) => { listState.sort = e.target.value; apply(); });
+    document.querySelector('.letters').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      listState.letter = b.dataset.l;
+      document.querySelectorAll('.letters button').forEach((x) => x.classList.toggle('active', x === b));
+      apply();
+    });
+    $rows.addEventListener('click', () => {
+      listState.scroll = window.scrollY;
+      listState.restore = shown;
+    });
+
+    listObserver = new IntersectionObserver((ents) => { if (ents.some((e) => e.isIntersecting)) more(); }, { rootMargin: '600px' });
+    listObserver.observe(document.getElementById('sentinel'));
+    apply();
+  }
+
+  // ------------------------------------------------------------------
+  // Nézet: versenyző adatlap
+  // ------------------------------------------------------------------
+  function renderAthlete(id) {
+    const a = M.A.get(id);
+    if (!a || !a.res.length) return renderNotFound('Nincs ilyen versenyző.');
+    const lastR = a.res[a.count - 1];
+    const bestPos = a.res.reduce((b, r) => (pct(r) < pct(b) ? r : b));
+    const splitYears = a.res.filter((r) => r.swim != null);
+
+    $app.innerHTML = `
+      <div class="page-head">
+        <div class="eyebrow"><a href="#/">← Finisherek</a></div>
+        <h1>${esc(a.name)}</h1>
+        <p class="lead">${[a.by ? `Született ${a.by}` : '', a.club ? esc(a.club) : '',
+          `${a.count}× célba ért ${a.first === a.last ? a.first : `${a.first} és ${a.last} között`}`].filter(Boolean).join(' · ')}</p>
+      </div>
+      <div class="tiles">
+        ${tile('Célba érések', `${a.count}×`, a.streak > 1 ? `leghosszabb sorozat: ${a.streak} év` : '')}
+        ${tile('Legjobb idő', fmt(a.best), `${a.bestRes.year} · ${a.bestRes.pos}. hely`)}
+        ${tile('Legutóbbi', fmt(lastR.t), `${lastR.year}${a.count > 1 ? ` · ${fmtDiff(lastR.t - a.best)} a legjobbhoz` : ''}`)}
+        ${tile('Legjobb helyezés', `${bestPos.pos}.`, `${bestPos.year} · ${bestPos.y.n} célba érkezőből (${pctLabel(pct(bestPos))})`)}
+      </div>
+      ${a.count > 1 ? `<section class="card">
+        <div class="card-head">
+          <div><h2>Célidők évenként</h2><p id="trendNote"></p></div>
+          <div class="seg" role="tablist">
+            <button type="button" data-m="time" class="active">Célidő</button>
+            <button type="button" data-m="pct">Helyezés a mezőnyben</button>
+          </div>
+        </div>
+        <div class="legend" id="trendLegend"></div>
+        <div class="chart" id="trend"></div>
+      </section>` : `<section class="card">
+        <div class="card-head"><div><h2>Helye a ${lastR.year}. évi mezőnyben</h2>
+          <p>A célba érkezők idő szerinti eloszlása félórás sávokban. Ha több évben is célba ér, itt a trendgrafikonja jelenik meg.</p></div></div>
+        ${legendHtml([{ name: `${a.name} sávja`, color: 'var(--s1)', dot: true }, { name: 'többi célba érkező', color: 'var(--ref)', dot: true }])}
+        <div class="chart" id="trend"></div>
+        <p class="chart-note">${lastR.pos}. hely ${lastR.y.n} célba érkezőből – a mezőny ${Math.round(100 - pct(lastR))}%-ánál gyorsabb.</p>
+      </section>`}
+      ${splitYears.length ? `<section class="card"><div class="card-head"><div><h2>Részidők</h2><p>Úszás 3,8 km · kerékpár 180 km · futás 42,2 km, a helyezés az adott szakaszon a mezőnyben.</p></div></div>
+        ${legendHtml(DISC.map((d) => ({ name: d.label, color: d.color, dot: true })))}
+        <div class="split-grid">${splitYears.slice().reverse().map(splitBlock).join('')}</div></section>` : ''}
+      <section class="card">
+        <div class="card-head"><h2>Eredmények</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Év</th><th class="r">Célidő</th><th class="r">Helyezés</th><th class="r">Mezőny</th><th class="r">A legjobbhoz</th><th class="r">A mediánhoz</th></tr></thead>
+          <tbody>${a.res.slice().reverse().map((r) => `
+            <tr class="${r === a.bestRes && a.count > 1 ? 'pb' : ''}">
+              <td><a href="#/ev/${r.year}">${r.year}</a>${r === a.bestRes && a.count > 1 ? '<span class="pb-tag">legjobb</span>' : ''}</td>
+              <td class="r">${fmt(r.t)}</td>
+              <td class="r">${r.pos}. <span class="muted">/ ${r.y.n}</span></td>
+              <td class="r">${pctLabel(pct(r))}</td>
+              <td class="r">${r === a.bestRes ? '–' : fmtDiff(r.t - a.best)}</td>
+              <td class="r ${r.t < r.y.median ? 'delta-good' : ''}">${fmtDiff(r.t - r.y.median)}</td>
+            </tr>`).join('')}</tbody>
+        </table></div>
+      </section>`;
+
+    const drawTrend = (mode) => {
+      const el = document.getElementById('trend');
+      observers.forEach((o) => o.unobserve(el));
+      const pts = a.res.map((r) => ({ x: r.year, y: mode === 'time' ? r.t : pct(r), r }));
+      const series = [];
+      if (mode === 'time') {
+        const x0 = a.first === a.last ? a.first - 1 : a.first, x1 = a.first === a.last ? a.last + 1 : a.last;
+        const ref = M.years.filter((y) => y.year >= x0 && y.year <= x1).map((y) => ({ x: y.year, y: y.median }));
+        series.push({ name: 'Mezőny mediánja', color: 'var(--ref)', points: ref, dots: false, endLabel: 'medián' });
+      }
+      series.push({ name: a.name, color: 'var(--s1)', points: pts });
+      document.getElementById('trendNote').textContent = mode === 'time'
+        ? 'Feljebb = gyorsabb. A szürke vonal az adott év összes célba érkezőjének medián ideje.'
+        : 'Hányadik százalékban ért célba a mezőnyön belül (feljebb = előrébb). Kiszűri az időjárás és a pálya évenkénti hatását.';
+      document.getElementById('trendLegend').innerHTML = mode === 'time'
+        ? legendInner([{ name: a.name, color: 'var(--s1)' }, { name: 'Mezőny mediánja', color: 'var(--ref)' }]) : '';
+      const b = a.bestRes;
+      const bestP = a.res.reduce((x, r) => (pct(r) < pct(x) ? r : x));
+      lineChart(el, {
+        series, primary: series.length - 1, invert: true, kind: mode,
+        yDomain: mode === 'pct' ? [0, 100] : null,
+        annotate: a.count > 1 ? [mode === 'time'
+          ? { x: b.year, y: b.t, text: `legjobb ${fmt(b.t)}` }
+          : { x: bestP.year, y: pct(bestP), text: `legjobb ${pctLabel(pct(bestP))}` }] : [],
+        ariaLabel: `${a.name} célidői évenként`,
+        tip: (x) => {
+          const r = a.res.find((q) => q.year === x);
+          const y = M.Y.get(x);
+          if (!r) return y ? `<div class="tt-title">${x}</div>${ttRow('Nem indult / nem ért célba', '')}${ttRow('Mezőny mediánja', fmt(y.median), 'var(--ref)')}` : null;
+          return `<div class="tt-title">${x}</div>
+            ${ttRow('Célidő', fmt(r.t), 'var(--s1)')}
+            ${ttRow('Helyezés', `${r.pos}. / ${r.y.n}`)}
+            ${ttRow('Mezőny', pctLabel(pct(r)))}
+            ${ttRow('Mezőny mediánja', fmt(r.y.median), 'var(--ref)')}
+            ${a.count > 1 ? ttRow('A legjobbhoz', r === a.bestRes ? 'legjobb' : fmtDiff(r.t - a.best)) : ''}`;
+        },
+        onClick: (x) => { if (a.res.some((q) => q.year === x)) location.hash = `#/ev/${x}`; },
+      });
+    };
+    if (a.count === 1) {
+      const bins = histBins(lastR.y), hi = binIndex(bins, lastR.t);
+      columnChart(document.getElementById('trend'), bins.map((b, i) => ({
+        label: fmtHM(b.s),
+        value: b.n,
+        tip: `<div class="tt-title">${fmtHM(b.s)} – ${fmtHM(b.e)}</div>${ttRow('Célba érkezők', b.n)}${i === hi ? ttRow(a.name, fmt(lastR.t), 'var(--s1)') : ''}`,
+      })), { highlight: hi, labelEvery: 2, ariaLabel: `${lastR.year}. évi célidők eloszlása, kiemelve ${a.name} sávja` });
+      return;
+    }
+    drawTrend('time');
+    document.querySelector('.seg').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('active', x === btn));
+      drawTrend(btn.dataset.m);
+    });
+  }
+
+  function legendInner(items) {
+    return items.map((i) => `<span><i class="${i.dot ? 'key-dot' : 'key-line'}" style="background:${i.color}"></i>${esc(i.name)}</span>`).join('');
+  }
+  const legendHtml = (items) => `<div class="legend">${legendInner(items)}</div>`;
+
+  function splitBlock(r) {
+    const total = DISC.reduce((s, d) => s + (r[d.k] || 0), 0) || r.t;
+    const sp = r.y.split;
+    const seg = DISC.map((d) => {
+      const v = r[d.k];
+      if (!v) return '';
+      const share = (v / total) * 100;
+      const label = share > 14 ? fmt(v) : '';
+      return `<div class="${d.cls}" style="flex:${v} 1 0" title="${d.label}: ${fmt(v)}">${label}</div>`;
+    }).join('');
+    const rows = DISC.map((d) => {
+      const v = r[d.k];
+      if (v == null) return '';
+      const s = sp[d.k];
+      const rank = lowerBound(s.sorted, v) + 1;
+      return `<tr><td><i class="key-dot" style="background:${d.color};margin-right:8px"></i>${d.label}</td>
+        <td class="r">${fmt(v)}</td><td class="r">${rank}. <span class="muted">/ ${s.sorted.length}</span></td>
+        <td class="r ${v < s.median ? 'delta-good' : ''}">${fmtDiff(v - s.median)}</td></tr>`;
+    }).join('');
+    return `<div class="split-year"><h3><a href="#/ev/${r.year}">${r.year}</a> · ${fmt(r.t)}</h3>
+      <div class="splitbar" role="img" aria-label="${DISC.filter((d) => r[d.k]).map((d) => `${d.label} ${fmt(r[d.k])}`).join(', ')}">${seg}</div>
+      <div class="table-wrap"><table><thead><tr><th>Szakasz</th><th class="r">Idő</th><th class="r">Helyezés</th><th class="r">A mediánhoz</th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`;
+  }
+
+  // ------------------------------------------------------------------
+  // Nézet: évek
+  // ------------------------------------------------------------------
+  function renderYears() {
+    const ys = M.years;
+    const maxY = ys.reduce((b, y) => (y.n > b.n ? y : b));
+    $app.innerHTML = `
+      <div class="page-head">
+        <h1>Évek</h1>
+        <p class="lead">${ys[0].year} és ${ys[ys.length - 1].year} között ${ys.length} versenyen összesen ${nf.format(M.results)} célba érés. Kattints egy évre a teljes eredménylistáért.</p>
+      </div>
+      <section class="card">
+        <div class="card-head"><div><h2>Célba érkezők száma</h2><p>Teljes táv, egyéni.</p></div></div>
+        <div class="chart" id="cnt"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><div><h2>Győztes és medián idő</h2><p>Feljebb = gyorsabb.</p></div></div>
+        ${legendHtml([{ name: 'Győztes idő', color: 'var(--s1)' }, { name: 'Medián idő', color: 'var(--s2)' }])}
+        <div class="chart" id="tm"></div>
+      </section>
+      <section class="card">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Év</th><th class="r">Célba érkezők</th><th class="r">Új finisherek</th><th>Győztes</th><th class="r">Győztes idő</th><th class="r">Medián</th></tr></thead>
+          <tbody>${ys.slice().reverse().map((y) => `<tr>
+            <td><a href="#/ev/${y.year}">${y.year}</a></td><td class="r">${y.n}</td><td class="r">${y.rookies}</td>
+            <td><a href="#/versenyzo/${y.winner.a.id}">${esc(y.winner.a.name)}</a></td>
+            <td class="r">${fmt(y.winner.t)}</td><td class="r">${fmt(y.median)}</td></tr>`).join('')}</tbody>
+        </table></div>
+      </section>`;
+    const last = ys[ys.length - 1];
+    columnChart(document.getElementById('cnt'), ys.map((y) => ({
+      label: String(y.year),
+      value: y.n,
+      valueLabel: y === maxY || y === last ? String(y.n) : '',
+      tip: `<div class="tt-title">${y.year}</div>${ttRow('Célba érkezők', y.n)}${ttRow('Új finisherek', y.rookies)}${ttRow('Győztes idő', fmt(y.winner.t))}`,
+      onClick: () => { location.hash = `#/ev/${y.year}`; },
+    })), { ariaLabel: 'Célba érkezők száma évenként', labelEvery: 5 });
+    lineChart(document.getElementById('tm'), {
+      kind: 'time', invert: true,
+      series: [
+        { name: 'Győztes idő', color: 'var(--s1)', points: ys.map((y) => ({ x: y.year, y: y.winner.t })), dots: false, endLabel: 'győztes' },
+        { name: 'Medián idő', color: 'var(--s2)', points: ys.map((y) => ({ x: y.year, y: y.median })), dots: false, endLabel: 'medián' },
+      ],
+      ariaLabel: 'Győztes és medián célidő évenként',
+      tip: (x) => {
+        const y = M.Y.get(x);
+        return `<div class="tt-title">${x}</div>${ttRow('Győztes', fmt(y.winner.t), 'var(--s1)')}${ttRow('Medián', fmt(y.median), 'var(--s2)')}${ttRow('Célba érkezők', y.n)}`;
+      },
+      onClick: (x) => { location.hash = `#/ev/${x}`; },
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Nézet: egy év
+  // ------------------------------------------------------------------
+  function renderYear(year) {
+    const y = M.Y.get(year);
+    if (!y) return renderNotFound('Erre az évre nincs adat.');
+    const idx = M.years.indexOf(y);
+    const prev = M.years[idx - 1], next = M.years[idx + 1];
+    const sp = y.hasSplits;
+    $app.innerHTML = `
+      <div class="page-head">
+        <div class="eyebrow"><a href="#/evek">← Évek</a></div>
+        <div class="card-head" style="margin:0">
+          <h1>${year}</h1>
+          <div class="pager">
+            <a href="${prev ? `#/ev/${prev.year}` : '#'}" aria-disabled="${!prev}" aria-label="Előző év">← ${prev ? prev.year : ''}</a>
+            <a href="${next ? `#/ev/${next.year}` : '#'}" aria-disabled="${!next}" aria-label="Következő év">${next ? next.year : ''} →</a>
+          </div>
+        </div>
+      </div>
+      <div class="tiles">
+        ${tile('Célba érkezők', y.n, `ebből ${y.rookies} új finisher`)}
+        ${tile('Győztes idő', fmt(y.winner.t), `<a href="#/versenyzo/${y.winner.a.id}">${esc(y.winner.a.name)}</a>`)}
+        ${tile('Medián idő', fmt(y.median), 'a mezőny fele ennél gyorsabb')}
+        ${tile('Utolsó célba érkező', fmt(y.last.t), `<a href="#/versenyzo/${y.last.a.id}">${esc(y.last.a.name)}</a>`)}
+      </div>
+      <section class="card">
+        <div class="card-head"><div><h2>Célidők eloszlása</h2><p>Hányan értek célba az egyes félórás sávokban.</p></div></div>
+        <div class="chart" id="hist"></div>
+      </section>
+      ${sp ? `<section class="card">
+        <div class="card-head"><div><h2>Leggyorsabb részidők</h2><p>A mezőny medián részidői: ${DISC.slice(0, 3).map((d) => `${d.label.toLowerCase()} ${fmt(y.split[d.k].median)}`).join(' · ')}</p></div></div>
+        <div class="grid-2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">${DISC.slice(0, 3).map((d) => {
+          const top = y.res.filter((r) => r[d.k] != null).sort((p, q) => p[d.k] - q[d.k]).slice(0, 5);
+          return `<div><h3 style="font-size:15px;margin-bottom:4px"><i class="key-dot" style="background:${d.color};margin-right:8px"></i>${d.label}</h3>
+            <ol class="rank-list">${top.map((r, i) => `<li><span class="pos">${i + 1}.</span><a class="who" href="#/versenyzo/${r.a.id}">${esc(r.a.name)}</a><span class="val">${fmt(r[d.k])}</span></li>`).join('')}</ol></div>`;
+        }).join('')}</div>
+      </section>` : ''}
+      <section class="card">
+        <div class="card-head"><h2>Eredménylista</h2>
+          <label class="search" style="flex:0 1 260px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 0 1 6.3 12.9l5.4 5.4-1.4 1.4-5.4-5.4A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/></svg>
+            <span class="sr-only">Keresés</span><input id="yq" type="search" placeholder="Keresés…"></label>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th class="r">Hely</th><th>Név</th>${sp ? '<th>Klub</th><th class="r">Úszás</th><th class="r">Kerékpár</th><th class="r">Futás</th>' : ''}<th class="r">Célidő</th><th class="r">Hányadik célba érés</th></tr></thead>
+          <tbody id="ytb"></tbody>
+        </table></div>
+        <button class="btn show-more" id="ymore" type="button" hidden>Összes mutatása</button>
+      </section>`;
+
+    // hisztogram
+    const bins = histBins(y);
+    columnChart(document.getElementById('hist'), bins.map((b) => ({
+      label: fmtHM(b.s),
+      value: b.n,
+      tip: `<div class="tt-title">${fmtHM(b.s)} – ${fmtHM(b.e)}</div>${ttRow('Célba érkezők', b.n)}`,
+    })), { ariaLabel: `${year}: célidők eloszlása félórás sávokban`, labelEvery: 2 });
+
+    const $tb = document.getElementById('ytb'), $more = document.getElementById('ymore');
+    let limit = 100;
+    const rowHtml = (r) => `<tr>
+      <td class="r">${r.pos}.</td>
+      <td><a href="#/versenyzo/${r.a.id}">${esc(r.a.name)}</a></td>
+      ${sp ? `<td class="muted">${esc(r.club || '')}</td><td class="r">${fmt(r.swim)}</td><td class="r">${fmt(r.bike)}</td><td class="r">${fmt(r.run)}</td>` : ''}
+      <td class="r"><b>${fmt(r.t)}</b></td>
+      <td class="r">${r.nth === 1 ? '<span class="pb-tag" style="margin:0">első</span>' : `${r.nth}.`}</td></tr>`;
+    const fill = () => {
+      const tokens = fold(document.getElementById('yq').value.trim()).split(/\s+/).filter(Boolean);
+      const rows = y.res.filter((r) => tokens.every((t) => r.a.key.includes(t) || fold(r.club || '').includes(t)));
+      $tb.innerHTML = rows.slice(0, limit).map(rowHtml).join('') || `<tr><td colspan="9" class="empty">Nincs találat.</td></tr>`;
+      $more.hidden = rows.length <= limit;
+    };
+    document.getElementById('yq').addEventListener('input', debounce(fill, 120));
+    $more.addEventListener('click', () => { limit = Infinity; fill(); });
+    fill();
+  }
+
+  // ------------------------------------------------------------------
+  // Nézet: rekordok
+  // ------------------------------------------------------------------
+  function renderRecords() {
+    const fastest = [...M.athletes].sort((a, b) => a.best - b.best).slice(0, 25);
+    const most = [...M.athletes].sort((a, b) => b.count - a.count || a.first - b.first).slice(0, 25);
+    const streak = [...M.athletes].sort((a, b) => b.streak - a.streak || a.streakEnd - b.streakEnd).slice(0, 25);
+    const longest = [...M.athletes].filter((a) => a.count > 1).sort((a, b) => (b.last - b.first) - (a.last - a.first)).slice(0, 25);
+    const list = (arr, val, sub) => `<ol class="rank-list">${arr.map((a, i) => `<li><span class="pos">${i + 1}.</span>
+      <span class="who"><a href="#/versenyzo/${a.id}">${esc(a.name)}</a><small>${sub(a)}</small></span><span class="val">${val(a)}</span></li>`).join('')}</ol>`;
+    $app.innerHTML = `
+      <div class="page-head"><h1>Rekordok</h1><p class="lead">Toplisták a teljes távú egyéni célba érkezők között.</p></div>
+      <div class="grid-2">
+        <section class="card"><div class="card-head"><div><h2>Leggyorsabb egyéni idők</h2><p>Versenyzőnként a legjobb idő.</p></div></div>
+          ${list(fastest, (a) => fmt(a.best), (a) => a.bestRes.year)}</section>
+        <section class="card"><div class="card-head"><div><h2>Legtöbb célba érés</h2><p>Nagyatádon, teljes távon.</p></div></div>
+          ${list(most, (a) => `${a.count}×`, (a) => `${a.first}–${a.last}`)}</section>
+        <section class="card"><div class="card-head"><div><h2>Leghosszabb sorozat</h2><p>Egymást követő években célba érve.</p></div></div>
+          ${list(streak, (a) => `${a.streak} év`, (a) => `${a.streakEnd - a.streak + 1}–${a.streakEnd}`)}</section>
+        <section class="card"><div class="card-head"><div><h2>Leghosszabb pályafutás</h2><p>Az első és az utolsó célba érés között eltelt évek.</p></div></div>
+          ${list(longest, (a) => `${a.last - a.first} év`, (a) => `${a.first}–${a.last}`)}</section>
+      </div>`;
+  }
+
+  function renderNotFound(msg) {
+    $app.innerHTML = `<div class="notice"><p>${esc(msg)}</p><p><a href="#/">Vissza a finisherekhez</a></p></div>`;
+  }
+
+  // ------------------------------------------------------------------
+  // Útválasztás
+  // ------------------------------------------------------------------
+  function route() {
+    resetView();
+    const [view, arg] = location.hash.replace(/^#\/?/, '').split('/');
+    const navKey = { versenyzo: 'list', '': 'list', evek: 'years', ev: 'years', rekordok: 'records' }[view || ''] || 'list';
+    document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navKey));
+    let title = 'Finisherek';
+    if (view === 'versenyzo') { renderAthlete(Number(arg)); title = M.A.get(Number(arg))?.name || title; }
+    else if (view === 'ev') { renderYear(Number(arg)); title = `${arg}. év`; }
+    else if (view === 'evek') { renderYears(); title = 'Évek'; }
+    else if (view === 'rekordok') { renderRecords(); title = 'Rekordok'; }
+    else { renderList(); }
+    document.title = `${title} – eXtremeMan Nagyatád`;
+    if (!view && listState.scroll) { window.scrollTo(0, listState.scroll); listState.scroll = 0; }
+    else window.scrollTo(0, 0);
+  }
+
+  // téma váltó
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('theme', root.dataset.theme); } catch (e) { /* nem baj */ }
+  });
+  window.addEventListener('scroll', hideTip, { passive: true });
+
+  // indulás
+  fetchData().then(({ d, source: src }) => {
+    M = buildModel(d);
+    source = src;
+    document.getElementById('dataSource').textContent = {
+      supabase: 'Adatok: Supabase adatbázis.',
+      fallback: 'A Supabase adatbázis most nem érhető el – a beépített pillanatkép látszik.',
+      snapshot: 'Adatok: beépített pillanatkép (data/finishers.json).',
+    }[source];
+    window.addEventListener('hashchange', route);
+    route();
+  }).catch((e) => {
+    console.error(e);
+    $app.innerHTML = '<div class="notice"><p>Az adatok betöltése nem sikerült. Próbáld újra később.</p></div>';
+  });
+})();
