@@ -75,6 +75,7 @@ as $$
     'athletes', (
       select coalesce(json_agg(json_build_array(a.id, a.name, a.birth_year, a.sex) order by a.id), '[]'::json)
       from public.athletes a
+      where exists (select 1 from public.results r where r.athlete_id = a.id)  -- csak a nagyatádi teljes táv
     ),
     'results', (
       select coalesce(json_agg(json_build_array(
@@ -148,3 +149,71 @@ $$;
 
 revoke all on function public.lap_data(integer) from public;
 grant execute on function public.lap_data(integer) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- További eXtremeMan versenyek (Kaposvár, Gyékényes, Balatonszemes, Tab,
+-- Velence, Székesfehérvár, Nágocs, Nagyatád többi táva ...), 2015-től.
+-- ---------------------------------------------------------------------
+create table if not exists public.races (
+  key          text primary key,            -- pl. 2026-gyekenyes-t51
+  year         smallint not null,
+  series       text not null,               -- pl. gyekenyes
+  series_name  text not null,               -- pl. Gyékényes
+  name         text not null,               -- pl. eXtremeMan 51.5
+  seg_labels   jsonb not null default '[]', -- a szakaszok nevei, pl. ["Úszás","Depó 1",...]
+  n            integer not null default 0,  -- célba érkezők
+  best_s       integer,
+  median_s     integer
+);
+
+create table if not exists public.race_results (
+  race_key    text    not null references public.races(key) on delete cascade,
+  athlete_id  integer not null references public.athletes(id) on delete cascade,
+  pos         integer,                      -- abszolút helyezés (idő szerint)
+  sex_rank    integer,
+  finish_s    integer not null,
+  segs        jsonb   not null default '[]',-- szakaszidők mp-ben, a seg_labels sorrendjében
+  club        text,
+  primary key (race_key, athlete_id)
+);
+create index if not exists race_results_athlete_idx on public.race_results (athlete_id);
+
+alter table public.races        enable row level security;
+alter table public.race_results enable row level security;
+drop policy if exists "races: public read" on public.races;
+create policy "races: public read" on public.races for select to anon, authenticated using (true);
+drop policy if exists "race_results: public read" on public.race_results;
+create policy "race_results: public read" on public.race_results for select to anon, authenticated using (true);
+revoke insert, update, delete, truncate on public.races, public.race_results from anon, authenticated;
+grant select on public.races, public.race_results to anon, authenticated;
+
+-- Az összes további verseny egy hívással (a versenyző- és versenyoldalak töltik be,
+-- igény szerint). Formátum = data/other.json.
+create or replace function public.other_data()
+returns json
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with rr as (select key as race_key, row_number() over (order by year, key) - 1 as idx from public.races)
+  select json_build_object(
+    'races', (
+      select coalesce(json_agg(json_build_array(r.key, r.year, r.series, r.series_name, r.name, r.seg_labels, r.n, r.best_s, r.median_s)
+                               order by r.year, r.key), '[]'::json)
+      from public.races r
+    ),
+    'athletes', (
+      select coalesce(json_agg(json_build_array(a.id, a.name, a.birth_year, a.sex) order by a.id), '[]'::json)
+      from public.athletes a
+      where not exists (select 1 from public.results r where r.athlete_id = a.id)
+    ),
+    'results', (
+      select coalesce(json_agg(json_build_array(rr.idx, x.athlete_id, x.pos, x.sex_rank, x.finish_s, x.segs, x.club)
+                               order by rr.idx, x.pos), '[]'::json)
+      from public.race_results x join rr on rr.race_key = x.race_key
+    )
+  );
+$$;
+revoke all on function public.other_data() from public;
+grant execute on function public.other_data() to anon, authenticated;
