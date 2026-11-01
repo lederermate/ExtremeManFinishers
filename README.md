@@ -95,8 +95,17 @@ python3 scripts/build_data.py   # -> data/splits/<év>.json, supabase/seed_laps.
 python3 scripts/build_pages.py  # -> index.html, versenyzo/*, ev/*, sitemap.xml (SEO)
 ```
 
-Utána a `supabase/seed.sql`-t és a `supabase/seed_laps.sql`-t újra lefuttatni az SQL
-Editorban (a teljes tartalmat cserélik), és a változásokat feltölteni a GitHubra.
+További eXtremeMan versenyek (Kaposvár, Gyékényes, Balatonszemes, Tab, Velence,
+Székesfehérvár, Nágocs, Nagyatád többi táva) 2015-től – az események listája a
+szkript elején (`EVENTS`):
+
+```bash
+python3 scripts/evochip_races.py   # -> data/races/*.json
+```
+
+Utána az SQL Editorban sorban: `schema.sql` (ha változott), `seed.sql`,
+`seed_laps.sql`, `seed_laps_2.sql`, `seed_laps_3.sql`, `seed_races.sql`
+(a teljes tartalmat cserélik), és a változásokat feltölteni a GitHubra.
 Ha a `schema.sql` változott, előbb azt (többször is futtatható).
 
 ### Párosítás

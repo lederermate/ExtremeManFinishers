@@ -519,8 +519,7 @@ def main() -> None:
     #   supabase/seed_laps.sql  a Supabase lap_points + result_laps táblákhoz
     by_bib = {(r["year"], r.get("bib")): r["athlete_id"] for r in results if r.get("bib") is not None}
     out_dir = DATA / "splits"
-    lap_sql = ["-- Generálva: scripts/build_data.py. Futtatás: Supabase -> SQL Editor -> Run",
-               "begin;", "truncate public.lap_points, public.result_laps;"]
+    lap_years = []  # évenkénti SQL utasítások (két fájlba osztva, hogy beférjen az SQL Editorba)
     for f in sorted((DATA / "laps").glob("*.json")) if (DATA / "laps").exists() else []:
         lp = json.loads(f.read_text(encoding="utf-8"))
         year = lp["year"]
@@ -534,15 +533,40 @@ def main() -> None:
         (out_dir / f"{year}.json").write_text(
             json.dumps({"year": year, "points": lp["points"], "athletes": ath}, ensure_ascii=False, separators=(",", ":")),
             encoding="utf-8")
-        lap_sql.append("insert into public.lap_points (year, idx, label, disc, km) values")
-        lap_sql.append(",\n".join(f"({year},{i},{sql_str(p['label'])},{sql_str(p['disc'])},{'null' if p['km'] is None else p['km']})"
-                                   for i, p in enumerate(lp["points"])) + ";")
+        yl = ["insert into public.lap_points (year, idx, label, disc, km) values",
+              ",\n".join(f"({year},{i},{sql_str(p['label'])},{sql_str(p['disc'])},{'null' if p['km'] is None else p['km']})"
+                         for i, p in enumerate(lp["points"])) + ";"]
         if compact:
-            lap_sql.append("insert into public.result_laps (year, bib, laps) values")
-            lap_sql.append(",\n".join(f"({year},{b},'{json.dumps(v, separators=(',', ':'))}')" for b, v in sorted(compact.items())) + ";")
+            yl += ["insert into public.result_laps (year, bib, laps) values",
+                   ",\n".join(f"({year},{b},'{json.dumps(v, separators=(',', ':'))}')" for b, v in sorted(compact.items())) + ";"]
+        lap_years.append((year, yl))
         print(f"Köztes mérőpontok {year}: {len(ath)} célba érkező, {len(lp['points'])} mérőpont")
-    lap_sql.append("commit;")
-    (ROOT / "supabase" / "seed_laps.sql").write_text("\n".join(lap_sql) + "\n", encoding="utf-8")
+    # részekre osztás (legfeljebb ~650 KB / fájl), hogy beférjen a Supabase SQL Editorba
+    parts, cur, size = [], [], 0
+    for y, yl in lap_years:
+        n = len("\n".join(yl))
+        if cur and size + n > 650_000:
+            parts.append(cur)
+            cur, size = [], 0
+        cur.append((y, yl))
+        size += n
+    if cur:
+        parts.append(cur)
+    for old in (ROOT / "supabase").glob("seed_laps*.sql"):
+        old.unlink()
+    for k, part in enumerate(parts, start=1):
+        ys = [y for y, _ in part]
+        fname = "seed_laps.sql" if k == 1 else f"seed_laps_{k}.sql"
+        body = [f"-- Generálva: scripts/build_data.py. Köridők {ys[0]}–{ys[-1]} ({k}/{len(parts)}. rész).",
+                f"-- Futtatás: Supabase -> SQL Editor -> Run, a részek sorrendjében (seed_laps.sql, seed_laps_2.sql, ...)",
+                "begin;"]
+        body.append("truncate public.lap_points, public.result_laps;" if k == 1 else
+                    f"delete from public.lap_points where year between {ys[0]} and {ys[-1]}; "
+                    f"delete from public.result_laps where year between {ys[0]} and {ys[-1]};")
+        for _, yl in part:
+            body += yl
+        body.append("commit;")
+        (ROOT / "supabase" / fname).write_text("\n".join(body) + "\n", encoding="utf-8")
 
     print(f"Összesen: {len(athletes)} versenyző, {len(results)} eredmény "
           f"({sum(1 for r in results if r.get('swim') is not None)} részidővel)")
