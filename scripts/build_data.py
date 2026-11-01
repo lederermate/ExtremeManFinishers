@@ -351,6 +351,37 @@ def main() -> None:
     out.append("commit;")
     (ROOT / "supabase" / "seed.sql").write_text("\n".join(out) + "\n", encoding="utf-8")
 
+    # ---- köztes mérőpontok (data/laps/<év>.json, rajtszám szerint) ----
+    # Tömör forma: versenyzőnként [[összidő_mp, helyezés], ...] – a köridő a
+    # különbségekből számolható. Kimenet:
+    #   data/splits/<év>.json   tartalék a weboldalnak (versenyző-azonosító szerint)
+    #   supabase/seed_laps.sql  a Supabase lap_points + result_laps táblákhoz
+    by_bib = {(r["year"], r.get("bib")): r["athlete_id"] for r in results if r.get("bib") is not None}
+    out_dir = DATA / "splits"
+    lap_sql = ["-- Generálva: scripts/build_data.py. Futtatás: Supabase -> SQL Editor -> Run",
+               "begin;", "truncate public.lap_points, public.result_laps;"]
+    for f in sorted((DATA / "laps").glob("*.json")) if (DATA / "laps").exists() else []:
+        lp = json.loads(f.read_text(encoding="utf-8"))
+        year = lp["year"]
+        compact = {}
+        for bib, pts in lp["athletes"].items():
+            if (year, int(bib)) in by_bib:  # csak a célba érkezők
+                compact[int(bib)] = [[p[0], p[2]] for p in pts]
+        ath = {str(by_bib[(year, b)]): v for b, v in compact.items()}
+        out_dir.mkdir(exist_ok=True)
+        (out_dir / f"{year}.json").write_text(
+            json.dumps({"year": year, "points": lp["points"], "athletes": ath}, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8")
+        lap_sql.append("insert into public.lap_points (year, idx, label, disc, km) values")
+        lap_sql.append(",\n".join(f"({year},{i},{sql_str(p['label'])},{sql_str(p['disc'])},{'null' if p['km'] is None else p['km']})"
+                                   for i, p in enumerate(lp["points"])) + ";")
+        if compact:
+            lap_sql.append("insert into public.result_laps (year, bib, laps) values")
+            lap_sql.append(",\n".join(f"({year},{b},'{json.dumps(v, separators=(',', ':'))}')" for b, v in sorted(compact.items())) + ";")
+        print(f"Köztes mérőpontok {year}: {len(ath)} célba érkező, {len(lp['points'])} mérőpont")
+    lap_sql.append("commit;")
+    (ROOT / "supabase" / "seed_laps.sql").write_text("\n".join(lap_sql) + "\n", encoding="utf-8")
+
     print(f"Összesen: {len(athletes)} versenyző, {len(results)} eredmény "
           f"({sum(1 for r in results if r.get('swim') is not None)} részidővel)")
     print("Kimenet: supabase/seed.sql, data/finishers.json, data/match_report.txt")

@@ -30,6 +30,8 @@ https://lederermate.github.io/ExtremeManFinishers/
 | `data/finishers.json` | az összes adat tömör formában – tartalék, ha a Supabase nem elérhető |
 | `supabase/schema.sql` | adatbázis séma + jogosultságok + `finisher_data()` függvény |
 | `supabase/seed.sql` | az adatok betöltése (generált fájl) |
+| `supabase/seed_laps.sql` | köztes mérőpontok (köridők) betöltése (generált fájl) |
+| `data/laps/`, `data/splits/` | köztes mérőpontok rajtszám, ill. versenyző szerint (tartalék) |
 | `scripts/` | adatgyűjtő és -építő szkriptek (lásd lent) |
 | `data/extremetour.json` | az extremetour.hu-ról letöltött nyers adatok (1990–2025) |
 | `data/evochip_<év>.json`, `sources/evochip/` | az EvoChip exportok (2022–2026) és a kinyert adatok |
@@ -43,7 +45,7 @@ https://lederermate.github.io/ExtremeManFinishers/
 1. https://supabase.com → **New project** (régió: *Central EU (Frankfurt)*, az ingyenes csomag elég).
 2. **SQL Editor → New query**: másold be a `supabase/schema.sql` tartalmát → **Run**.
 3. **SQL Editor → New query**: másold be a `supabase/seed.sql` tartalmát → **Run**
-   (kb. 400 KB, pár másodperc). Ellenőrzés: *Table Editor* → `athletes` ≈ 3800 sor,
+   (kb. 470 KB, pár másodperc), majd ugyanígy a `supabase/seed_laps.sql`-t (köridők). Ellenőrzés: *Table Editor* → `athletes` ≈ 3800 sor,
    `results` ≈ 10 780 sor.
 4. **Project Settings → API Keys**: másold ki a projekt URL-t és a **publishable**
    (vagy régi *anon*) kulcsot, és írd be a `config.js`-be.
@@ -82,8 +84,19 @@ done
 python3 scripts/build_data.py
 ```
 
-Utána a `supabase/seed.sql`-t újra lefuttatni az SQL Editorban (a teljes tartalmat
-cseréli), és a változásokat feltölteni a GitHubra.
+Köztes mérőpontok (úszás körök, kerékpár szakaszok, futás körök) az EvoChip egyéni
+adatlapjairól (évente kb. 300 oldal; a letöltött oldalak a `.cache/` mappába kerülnek):
+
+```bash
+for y in 22 23 24 25 26; do
+  python3 scripts/scrape_evochip_laps.py Nagyatad${y}VIn 20$y
+done
+python3 scripts/build_data.py   # -> data/splits/<év>.json, supabase/seed_laps.sql
+```
+
+Utána a `supabase/seed.sql`-t és a `supabase/seed_laps.sql`-t újra lefuttatni az SQL
+Editorban (a teljes tartalmat cserélik), és a változásokat feltölteni a GitHubra.
+Ha a `schema.sql` változott, előbb azt (többször is futtatható).
 
 ### Párosítás
 
