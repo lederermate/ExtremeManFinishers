@@ -9,6 +9,6 @@
 // adatbázis jogosultságai adják (lásd supabase/schema.sql).
 // A "secret" / "service_role" kulcsot SOHA ne írd ide!
 window.FINISHERS_CONFIG = {
-  supabaseUrl: '',
-  supabaseKey: '',
+  supabaseUrl: 'https://rvpmblonczssifuwtgnc.supabase.co',
+  supabaseKey: 'sb_publishable_b6vqL1BjwUWDTZyB3xlHqw_rF-55Vmq',
 };
