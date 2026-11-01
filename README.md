@@ -92,6 +92,7 @@ for y in 22 23 24 25 26; do
   python3 scripts/scrape_evochip_laps.py Nagyatad${y}VIn 20$y
 done
 python3 scripts/build_data.py   # -> data/splits/<év>.json, supabase/seed_laps.sql
+python3 scripts/build_pages.py  # -> index.html, versenyzo/*, ev/*, sitemap.xml (SEO)
 ```
 
 Utána a `supabase/seed.sql`-t és a `supabase/seed_laps.sql`-t újra lefuttatni az SQL
@@ -119,6 +120,21 @@ Kézi javítás a `data/overrides.json`-ban:
 ```
 
 (a szám az extremetour.hu versenyző-azonosítója, pl. `extremetour.hu/finisher/885`).
+
+## Keresőoptimalizálás (SEO)
+
+- Az oldal sablonja a `templates/page.html`; a `scripts/build_pages.py` ebből generálja
+  a főoldalt (`index.html`), minden versenyzőnek egy saját oldalt
+  (`versenyzo/<id>-<név>/`) és minden évnek egyet (`ev/<év>/`). A tartalom (név,
+  eredmények, részidők) benne van a HTML-ben, így a keresők látják; betöltés után az
+  `app.js` ugyanott az interaktív nézetet mutatja. **Az `index.html`-t ne szerkeszd
+  kézzel – a sablont módosítsd, és futtasd újra a szkriptet.**
+- Oldalanként egyedi cím, leírás, kanonikus URL, Open Graph / Twitter kártya
+  (`images/og.jpg`) és JSON-LD (WebSite, Dataset, ProfilePage, BreadcrumbList).
+- `sitemap.xml` minden oldallal; a `robots.txt` a `lederermate.github.io` repóban van
+  (a domain gyökerében kell lennie).
+- Google Search Console: a `https://lederermate.github.io/ExtremeManFinishers/` címet
+  URL-előtagként felvenni, és beküldeni a `sitemap.xml`-t.
 
 ## Források
 

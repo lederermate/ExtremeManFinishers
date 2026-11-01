@@ -1143,19 +1143,32 @@
   // ------------------------------------------------------------------
   // Útválasztás
   // ------------------------------------------------------------------
+  /** Az aktuális nézet: a #/... útvonalból, vagy ha nincs, a statikus oldal
+   *  címéből (versenyzo/<id>-<név>/, ev/<év>/ – ezeket a build_pages.py generálja). */
+  function currentRoute() {
+    const h = location.hash.replace(/^#\/?/, '');
+    if (h) return h.split('/');
+    const m = location.pathname.match(/\/(versenyzo|ev)\/(\d+)(?:-[^/]*)?\/?(?:index\.html)?$/);
+    return m ? [m[1], m[2]] : [''];
+  }
+
   function route() {
     resetView();
     $hero.innerHTML = '';
-    const [view, arg] = location.hash.replace(/^#\/?/, '').split('/');
+    const [view, arg] = currentRoute();
     const navKey = { versenyzo: 'list', '': 'list', evek: 'years', ev: 'years', rekordok: 'records' }[view || ''] || 'list';
     document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navKey));
-    let title = 'Finisherek';
-    if (view === 'versenyzo') { renderAthlete(Number(arg)); title = M.A.get(Number(arg))?.name || title; }
-    else if (view === 'ev') { renderYear(Number(arg)); title = `${arg}. év`; }
-    else if (view === 'evek') { renderYears(); title = 'Évek'; }
-    else if (view === 'rekordok') { renderRecords(); title = 'Rekordok'; }
+    // a címek egyeznek a build_pages.py által generált statikus oldalakéval (SEO)
+    let title = 'eXtremeMan Nagyatád finisherek – eredmények 1990 óta';
+    if (view === 'versenyzo') {
+      renderAthlete(Number(arg));
+      const a = M.A.get(Number(arg));
+      if (a) title = `${a.name} – eXtremeMan Nagyatád eredmények`;
+    } else if (view === 'ev') { renderYear(Number(arg)); title = `eXtremeMan Nagyatád ${arg} eredmények – teljes táv`; }
+    else if (view === 'evek') { renderYears(); title = 'Évek – eXtremeMan Nagyatád finisherek'; }
+    else if (view === 'rekordok') { renderRecords(); title = 'Rekordok – eXtremeMan Nagyatád finisherek'; }
     else { renderList(); }
-    document.title = `${title} – eXtremeMan Nagyatád`;
+    document.title = title;
     if (!view && listState.scroll) { window.scrollTo(0, listState.scroll); listState.scroll = 0; }
     else window.scrollTo(0, 0);
   }
