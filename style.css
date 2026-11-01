@@ -222,16 +222,14 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .tooltip .tt-key { display: inline-flex; align-items: center; gap: 6px; }
 
 /* részidő sáv */
-.splitbar { display: flex; gap: 2px; height: 28px; border-radius: 4px; overflow: hidden; margin: 6px 0 4px; }
-.splitbar div { display: flex; align-items: center; padding: 0 8px; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; border-radius: 4px; min-width: 0; }
-.splitbar .sw { background: var(--s1); }
-.splitbar .bk { background: var(--s2); }
-.splitbar .rn { background: var(--s3); }
-.splitbar .tr { background: var(--s4); color: var(--s4-ink); }
-.split-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-.split-multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 20px; }
-.split-multiples h3 { font-size: 14px; font-weight: 600; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
-.split-year h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.split-table td { vertical-align: middle; }
+.split-cell small { display: block; font-size: 11px; color: var(--muted); line-height: 1.2; }
+.split-cell.best { color: var(--accent-ink); font-weight: 600; }
+.split-cell.best small { color: var(--accent-ink); font-weight: 500; opacity: .8; }
+.split-table td[data-k] { cursor: default; }
+.minibar { display: flex; gap: 2px; width: 120px; height: 8px; }
+.minibar i { border-radius: 99px; min-width: 2px; }
+@media (max-width: 640px) { .split-table .c-bar { display: none; } }
 
 /* ---------- Kétoszlopos elrendezés ---------- */
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
@@ -256,4 +254,4 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .footer p { margin: 4px 0; }
 
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
-@media (forced-colors: active) { .splitbar div { border: 1px solid CanvasText; } }
+@media (forced-colors: active) { .minibar i { border: 1px solid CanvasText; } }

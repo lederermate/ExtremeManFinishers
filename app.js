@@ -565,9 +565,8 @@
         <div class="legend" id="splitLegend"></div>
         <div id="splitTrend"></div>
       </section>` : ''}
-      ${splitYears.length ? `<section class="card"><div class="card-head"><div><h2>Részidők</h2><p>Úszás 3,8 km · kerékpár 180 km · futás 42,2 km, a helyezés az adott szakaszon a mezőnyben.</p></div></div>
-        ${legendHtml(DISC.map((d) => ({ name: d.label, color: d.color, dot: true })))}
-        <div class="split-grid">${splitYears.slice().reverse().map(splitBlock).join('')}</div></section>` : ''}
+      ${splitYears.length ? `<section class="card"><div class="card-head"><div><h2>Részidők</h2><p>Úszás 3,8 km · kerékpár 180 km · futás 42,2 km. Az idő alatt a szakaszhelyezés; kiemelve a legjobb.</p></div></div>
+        ${splitTable(splitYears)}</section>` : ''}
       <section class="card">
         <div class="card-head"><h2>Eredmények</h2></div>
         <div class="table-wrap"><table>
@@ -714,30 +713,55 @@
   }
   const legendHtml = (items) => `<div class="legend">${legendInner(items)}</div>`;
 
-  function splitBlock(r) {
-    const total = DISC.reduce((s, d) => s + (r[d.k] || 0), 0) || r.t;
-    const sp = r.y.split;
-    const seg = DISC.map((d) => {
+  /** Részidők táblázat: soronként egy év, oszloponként egy szakasz. */
+  function splitTable(rows) {
+    const multi = rows.length > 1;
+    const best = {};
+    for (const d of DISC) {
+      const vals = rows.map((r) => r[d.k]).filter((v) => v != null);
+      best[d.k] = vals.length ? Math.min(...vals) : null;
+    }
+    const bestT = Math.min(...rows.map((r) => r.t));
+    const bar = (r) => {
+      const total = DISC.reduce((s, d) => s + (r[d.k] || 0), 0) || r.t;
+      return `<div class="minibar" role="img" aria-label="${DISC.filter((d) => r[d.k]).map((d) => `${d.label} ${Math.round((r[d.k] / total) * 100)}%`).join(', ')}">${
+        DISC.map((d) => (r[d.k] ? `<i style="flex:${r[d.k]} 1 0;background:${d.color}"></i>` : '')).join('')}</div>`;
+    };
+    const cell = (r, d) => {
       const v = r[d.k];
-      if (!v) return '';
-      const share = (v / total) * 100;
-      const label = share > 14 ? fmt(v) : '';
-      return `<div class="${d.cls}" style="flex:${v} 1 0" title="${d.label}: ${fmt(v)}">${label}</div>`;
-    }).join('');
-    const rows = DISC.map((d) => {
-      const v = r[d.k];
-      if (v == null) return '';
-      const s = sp[d.k];
-      const rank = lowerBound(s.sorted, v) + 1;
-      return `<tr><td><i class="key-dot" style="background:${d.color};margin-right:8px"></i>${d.label}</td>
-        <td class="r">${fmt(v)}</td><td class="r">${rank}. <span class="muted">/ ${s.sorted.length}</span></td>
-        <td class="r ${v < s.median ? 'delta-good' : ''}">${fmtDiff(v - s.median)}</td></tr>`;
-    }).join('');
-    return `<div class="split-year"><h3><a href="#/ev/${r.year}">${r.year}</a> · ${fmt(r.t)}</h3>
-      <div class="splitbar" role="img" aria-label="${DISC.filter((d) => r[d.k]).map((d) => `${d.label} ${fmt(r[d.k])}`).join(', ')}">${seg}</div>
-      <div class="table-wrap"><table><thead><tr><th>Szakasz</th><th class="r">Idő</th><th class="r">Helyezés</th><th class="r">A mediánhoz</th></tr></thead>
-      <tbody>${rows}</tbody></table></div></div>`;
+      if (v == null) return '<td class="r muted">–</td>';
+      const sp = r.y.split[d.k];
+      const rank = lowerBound(sp.sorted, v) + 1;
+      const isBest = multi && v === best[d.k];
+      return `<td class="r split-cell${isBest ? ' best' : ''}" data-y="${r.year}" data-k="${d.k}">${fmt(v)}<small>${rank}. / ${sp.sorted.length}</small></td>`;
+    };
+    return `<div class="table-wrap"><table class="split-table" id="splitTable">
+      <thead><tr><th>Év</th><th class="c-bar">Arányok</th>${DISC.map((d) =>
+        `<th class="r"><i class="key-dot" style="background:${d.color};margin-right:6px"></i>${d.label}</th>`).join('')}<th class="r">Célidő</th></tr></thead>
+      <tbody>${rows.slice().reverse().map((r) => `<tr>
+        <td><a href="#/ev/${r.year}">${r.year}</a></td>
+        <td class="c-bar">${bar(r)}</td>
+        ${DISC.map((d) => cell(r, d)).join('')}
+        <td class="r split-cell${multi && r.t === bestT ? ' best' : ''}"><b>${fmt(r.t)}</b><small>${r.pos}. / ${r.y.n}</small></td>
+      </tr>`).join('')}</tbody></table></div>`;
   }
+
+  // részidő-cella tooltip (eseménydelegálással, mert a táblázat HTML-ként készül)
+  document.addEventListener('pointermove', (ev) => {
+    const td = ev.target.closest && ev.target.closest('#splitTable td[data-k]');
+    if (!td) { if (document.getElementById('splitTable')?.dataset.tip) { hideTip(); delete document.getElementById('splitTable').dataset.tip; } return; }
+    const y = M.Y.get(Number(td.dataset.y));
+    const d = DISC.find((x) => x.k === td.dataset.k);
+    const r = y.res.find((q) => String(q.a.id) === (location.hash.split('/')[2] || ''));
+    if (!r) return;
+    const sp = y.split[d.k];
+    document.getElementById('splitTable').dataset.tip = '1';
+    showTip(`<div class="tt-title">${d.label} · ${y.year}</div>
+      ${ttRow('Idő', fmt(r[d.k]), d.color)}
+      ${ttRow('Helyezés', `${lowerBound(sp.sorted, r[d.k]) + 1}. / ${sp.sorted.length}`)}
+      ${ttRow('Mezőny mediánja', fmt(sp.median))}
+      ${ttRow('A mediánhoz', fmtDiff(r[d.k] - sp.median))}`, ev.clientX, ev.clientY);
+  });
 
   // ------------------------------------------------------------------
   // Nézet: évek
