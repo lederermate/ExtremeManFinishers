@@ -922,7 +922,24 @@
 
     for (const sp of specs) {
       const gs = groups(sp.disc);
-      const pts = gs.map((g) => { const t = segTime(mine, g); return t ? { x: g.x, y: metric[sp.disc](t, g.km), g, t } : null; }).filter(Boolean);
+      // a versenyző pontjai: ha egy köztes idő hiányzik (vagy hibás volt), a két
+      // érvényes pont közötti szakaszt egyben, átlagtempóval mutatjuk
+      const pts = [];
+      {
+        const s0 = P.findIndex((q) => q.disc === sp.disc);
+        let prevT = s0 > 0 ? (mine[s0 - 1] && mine[s0 - 1][0]) : 0, acc = 0, first = null;
+        for (const g of gs) {
+          acc += g.km;
+          if (first == null) first = g.start;
+          const t1 = mine[g.end] && mine[g.end][0];
+          if (t1 == null) continue;
+          if (prevT != null && t1 > prevT) {
+            const span = { ...g, km: acc, start: first, label: acc > g.km + 0.01 ? `${P[first].label} – ${g.label}` : g.label };
+            pts.push({ x: g.x, y: metric[sp.disc](t1 - prevT, acc), g: span, t: t1 - prevT });
+          }
+          prevT = t1; acc = 0; first = null;
+        }
+      }
       const ref = withMedian ? gs.map((g) => {
         const v = median(others.map((o) => segTime(o, g)).filter(Boolean).map((t) => metric[sp.disc](t, g.km)));
         return v != null ? { x: g.x, y: v } : null;

@@ -99,6 +99,68 @@ SPLIT_FIELDS = ("swim", "t1", "bike", "t2", "run")
 DISC_TOTAL = {"swim": 3.8, "bike": 180.0, "run": 42.2}
 
 
+def drop_out_of_order(pts, med=None):
+    """A köztes idők időrendje: ha egy mérőpont ideje kilóg a sorból (pl. a szőnyeg
+    egy későbbi körben észlelte a chipet), azt elhagyjuk. A leghosszabb, időben nem
+    csökkenő pontsorozat marad meg; egyforma hosszúak közül az, amelyik közelebb van
+    a versenyző tempója alapján várható időkhöz (med: a mezőny medián összideje
+    pontonként). Visszaad: (új pontlista, elhagyott pontok száma)."""
+    import math
+    idx = [i for i, p in enumerate(pts) if p and p[0] is not None]
+    if len(idx) < 2:
+        return pts, 0
+    last = idx[-1]
+    ratio = pts[last][0] / med[last] if med and med[last] else None
+
+    def cost(i):
+        if not ratio or not med or not med[i]:
+            return 0.0
+        return abs(math.log(pts[i][0] / (med[i] * ratio)))
+    best = {i: (1, -cost(i), [i]) for i in idx}
+    for a, i in enumerate(idx):
+        for j in idx[:a]:
+            if pts[j][0] <= pts[i][0]:
+                ln, c, seq = best[j]
+                cand = (ln + 1, c - cost(i), seq + [i])
+                if cand[:2] > best[i][:2]:
+                    best[i] = cand
+    keep = set(max(best.values(), key=lambda b: b[:2])[2])
+    out = [p if (i in keep or not p or p[0] is None) else [None, None, None] for i, p in enumerate(pts)]
+    return out, len(idx) - len(keep)
+
+
+def drop_too_fast(pts, points, med):
+    """Hihetetlenül gyors szakasz: a versenyző az előző érvényes ponttól ide 35%-kal
+    gyorsabban jutott volna el, mint ami a mezőnyhöz mért saját tempójából (az adott
+    szakasz medián ideje × a versenyző szakaszonkénti szorzója) következik. Ilyenkor a
+    pont ideje hibás (pl. a szőnyeg szembeirányú áthaladáskor olvasta a chipet)."""
+    pts = [list(p) if p else p for p in pts]
+    dropped = 0
+    for disc in ("swim", "bike", "run"):
+        ii = [i for i, q in enumerate(points) if q["disc"] == disc]
+        if len(ii) < 2:
+            continue
+        first, last = ii[0], ii[-1]
+        b = first - 1
+        start_t = 0 if b < 0 else (pts[b][0] if pts[b] and pts[b][0] is not None else None)
+        start_m = 0 if b < 0 else med[b]
+        if start_t is None or start_m is None or not pts[last] or pts[last][0] is None or not med[last]:
+            continue
+        f = (pts[last][0] - start_t) / max(1, med[last] - start_m)  # a versenyző szorzója a mezőnyhöz
+        prev_t, prev_m = start_t, start_m
+        for i in ii:
+            if not pts[i] or pts[i][0] is None or med[i] is None:
+                continue
+            exp_dt = (med[i] - prev_m) * f
+            dt = pts[i][0] - prev_t
+            if i != last and exp_dt > 1200 and dt < exp_dt / 1.35:
+                pts[i] = [None, None, None]
+                dropped += 1
+                continue
+            prev_t, prev_m = pts[i][0], med[i]
+    return pts, dropped
+
+
 def normalize_points(points):
     """A mérőpontok "km" értéke legyen a SZAKASZ hossza. Néhány évben (pl. 2015)
     a rajttól mért összesített táv szerepel, máshol hiányzik – javítjuk."""
@@ -532,15 +594,25 @@ def main() -> None:
     #   supabase/seed_laps.sql  a Supabase lap_points + result_laps táblákhoz
     by_bib = {(r["year"], r.get("bib")): r["athlete_id"] for r in results if r.get("bib") is not None}
     out_dir = DATA / "splits"
+    lap_dropped = defaultdict(int)
     lap_years = []  # évenkénti SQL utasítások (két fájlba osztva, hogy beférjen az SQL Editorba)
     for f in sorted((DATA / "laps").glob("*.json")) if (DATA / "laps").exists() else []:
         lp = json.loads(f.read_text(encoding="utf-8"))
         year = lp["year"]
         normalize_points(lp["points"])
         compact = {}
+        # a mezőny medián összideje mérőpontonként (a kilógó idők felismeréséhez)
+        med = []
+        for i in range(len(lp["points"])):
+            v = sorted(a[i][0] for a in lp["athletes"].values() if i < len(a) and a[i][0] is not None)
+            med.append(v[len(v) // 2] if v else None)
         for bib, pts in lp["athletes"].items():
             if (year, int(bib)) in by_bib:  # csak a célba érkezők
-                compact[int(bib)] = [[p[0], p[2]] for p in pts]
+                clean_pts, dropped = drop_out_of_order(pts, med)
+                clean_pts, d2 = drop_too_fast(clean_pts, lp["points"], med)
+                dropped += d2
+                lap_dropped[year] += dropped
+                compact[int(bib)] = [[p[0], p[2]] for p in clean_pts]
         ath = {str(by_bib[(year, b)]): v for b, v in compact.items()}
         out_dir.mkdir(exist_ok=True)
         (out_dir / f"{year}.json").write_text(
@@ -553,7 +625,8 @@ def main() -> None:
             yl += ["insert into public.result_laps (year, bib, laps) values",
                    ",\n".join(f"({year},{b},'{json.dumps(v, separators=(',', ':'))}')" for b, v in sorted(compact.items())) + ";"]
         lap_years.append((year, yl))
-        print(f"Köztes mérőpontok {year}: {len(ath)} célba érkező, {len(lp['points'])} mérőpont")
+        print(f"Köztes mérőpontok {year}: {len(ath)} célba érkező, {len(lp['points'])} mérőpont"
+              + (f", {lap_dropped[year]} időrendből kilógó köztes idő elhagyva" if lap_dropped[year] else ""))
     # részekre osztás (legfeljebb ~650 KB / fájl), hogy beférjen a Supabase SQL Editorba
     parts, cur, size = [], [], 0
     for y, yl in lap_years:
