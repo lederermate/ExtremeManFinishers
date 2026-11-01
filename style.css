@@ -341,3 +341,26 @@ body { font-size: 16px; }
 .pass-down { color: var(--accent-ink); }
 .split-explain { margin: -4px 0 10px; }
 .split-best-sample { color: var(--accent-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* további versenyek */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 0; }
+.page-head .chips { margin-top: 14px; }
+main > .chips { margin: 0 0 14px; }
+.chips-label { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/1 'Source Sans 3', system-ui, sans-serif; color: var(--ink);
+  background: var(--surface-2); border: 1px solid var(--border); padding: 6px 10px; cursor: pointer; text-decoration: none; }
+main a.chip { color: var(--ink); }
+.chip:hover { border-color: var(--accent); text-decoration: none; }
+.chip.active { background: var(--accent); color: #fff !important; border-color: var(--accent); }
+.chip.active .muted { color: rgba(255,255,255,.8); }
+.chip-main { background: var(--accent-wash); border-color: transparent; cursor: default; }
+.other-series + .other-series { margin-top: 22px; }
+.other-series h3 { font: 500 16px/1.2 Oswald, 'Source Sans 3', sans-serif; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 6px; }
+.other-table td.segs { white-space: normal; font-size: 13px; color: var(--muted); }
+.other-table td.segs span { display: inline-block; margin-right: 12px; white-space: nowrap; }
+.other-table td.segs b { color: var(--ink-2); font-weight: 600; }
+.race-year { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid var(--grid); }
+.race-year:first-of-type { border-top: 0; }
+.race-year > b { font: 600 16px/2 Oswald, sans-serif; }
+.race-year .chips { margin: 0; }
+@media (max-width: 640px) { .nav a { padding: 6px 6px; font-size: 13px; letter-spacing: .02em; } }

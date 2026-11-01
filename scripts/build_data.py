@@ -36,6 +36,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 NEW_ID_START = 100001
+SIDE_ID_START = 200001  # csak a további versenyeken induló versenyzők
 TIME_TOL = 3  # mp – az EvoChip és az extremetour kerekítése eltérhet
 
 
@@ -95,6 +96,27 @@ def sql_num(v):
 
 
 SPLIT_FIELDS = ("swim", "t1", "bike", "t2", "run")
+DISC_TOTAL = {"swim": 3.8, "bike": 180.0, "run": 42.2}
+
+
+def normalize_points(points):
+    """A mérőpontok "km" értéke legyen a SZAKASZ hossza. Néhány évben (pl. 2015)
+    a rajttól mért összesített táv szerepel, máshol hiányzik – javítjuk."""
+    for disc, total in DISC_TOTAL.items():
+        idx = [i for i, p in enumerate(points) if p["disc"] == disc]
+        if not idx:
+            continue
+        kms = [points[i]["km"] for i in idx]
+        if all(k is None for k in kms):
+            for i in idx:  # nincs táv megadva: egyenletes felosztás (közelítés)
+                points[i]["km"] = round(total / len(idx), 3)
+        elif all(k is not None for k in kms) and len(kms) > 1 and all(b > a for a, b in zip(kms, kms[1:])) \
+                and abs(kms[-1] - total) < total * 0.15 and sum(kms) > total * 1.3:
+            prev = 0.0
+            for i in idx:  # összesített -> szakaszhossz
+                cum = points[i]["km"]
+                points[i]["km"] = round(cum - prev, 3)
+                prev = cum
 
 
 def norm_lic(lic):
@@ -271,6 +293,54 @@ def main() -> None:
         return ", ".join(f"#{c['id']} {c['source_name']} ({c['birth_year'] or '?'}, utoljára {last_year[c['id']]})" for c in cands)
 
     # ------------------------------------------------------------------
+    # C) TOVÁBBI eXtremeMan VERSENYEK (data/races/*.json, scripts/evochip_races.py)
+    #    A 2026-os nagyatádi párosítás ELŐTT, hogy az itt megismert versenyzők
+    #    (licenc, név + szül. év) ott is felismerhetők legyenek.
+    #    Párosítás: licencszám -> EvoChip név + szül. év -> extremetour név + szül. év
+    #    -> különben új versenyző (200001-től).
+    # ------------------------------------------------------------------
+    side_next = SIDE_ID_START
+    races, race_results = [], []
+    side_stats = defaultdict(int)
+    for f in sorted((DATA / "races").glob("2*.json")) if (DATA / "races").exists() else []:
+        rc = json.loads(f.read_text(encoding="utf-8"))
+        rows = sorted(rc["rows"], key=lambda r: r["finish"])
+        taken = set()
+        for pos, row in enumerate(rows, start=1):
+            by, aid, how = row["birth_year"], None, ""
+            lic = norm_lic(row.get("license"))
+            ids = (ident_lic.get(lic, set()) if lic else set()) - taken
+            if len(ids) == 1:
+                aid, how = next(iter(ids)), "licenc"
+            else:
+                ids = (ident_name.get((loose_key(row["name"]), by), set()) if by else set()) - taken
+                if len(ids) == 1:
+                    aid, how = next(iter(ids)), "név+év"
+                else:
+                    cands = [c for c in by_key.get(key(row["name"]), []) if c["id"] not in taken and by and c["birth_year"] == by]
+                    if len(cands) == 1:
+                        aid, how = cands[0]["id"], "extremetour név+év"
+            if aid is None:
+                aid, how = side_next, "új"
+                side_next += 1
+                athletes[aid] = {"id": aid, "name": row["name"], "birth_year": by, "sex": row["sex"], "source_name": row["name"]}
+                by_key[key(row["name"])].append(athletes[aid])
+            else:
+                absorb(athletes[aid], row)
+            taken.add(aid)
+            remember(aid, row)
+            side_stats[how] += 1
+            race_results.append({"race": rc["key"], "athlete_id": aid, "pos": pos, "sex_rank": row["sex_rank"],
+                                 "finish": row["finish"], "segs": row["segs"], "club": row["club"]})
+        ts = [r["finish"] for r in rows]
+        races.append({"key": rc["key"], "year": rc["year"], "series": rc["series"], "series_name": rc["series_name"],
+                      "name": rc["name"], "seg_labels": rc["seg_labels"], "n": len(rows),
+                      "best": ts[0] if ts else None, "median": sorted(ts)[len(ts) // 2] if ts else None})
+    if races:
+        print(f"További versenyek: {len(races)} verseny, {len(race_results)} eredmény; párosítás: "
+              + ", ".join(f"{k}: {v}" for k, v in sorted(side_stats.items())))
+
+    # ------------------------------------------------------------------
     # B) ÚJ ÉVEK
     # ------------------------------------------------------------------
     next_id = NEW_ID_START
@@ -366,8 +436,9 @@ def main() -> None:
     if bad:
         raise SystemExit(f"Hiba: egy versenyzőhöz egy évben több eredmény került: {bad}")
 
-    # csak azok a versenyzők, akiknek van eredménye
-    used = {r["athlete_id"] for r in results}
+    # csak azok a versenyzők, akiknek van eredménye (nagyatádi teljes táv vagy további verseny)
+    core_ids = {r["athlete_id"] for r in results}
+    used = core_ids | {r["athlete_id"] for r in race_results}
     athletes = {k: v for k, v in athletes.items() if k in used}
 
     order = {"KÉTES": 0, "MEGJ.": 1, "ÖSSZ": 2, "OK  ": 3, "DÚSÍ": 4}
@@ -378,7 +449,8 @@ def main() -> None:
     rlist = sorted(results, key=lambda r: (r["year"], r["pos"]))
     fin = {
         "generated": "build_data.py",
-        "athletes": [[a["id"], a["name"], a["birth_year"], a["sex"]] for a in sorted(athletes.values(), key=lambda a: a["id"])],
+        "athletes": [[a["id"], a["name"], a["birth_year"], a["sex"]]
+                     for a in sorted(athletes.values(), key=lambda a: a["id"]) if a["id"] in core_ids],
         "results_cols": ["athlete_id", "year", "pos", "finish", "swim", "t1", "bike", "t2", "run", "club"],
         "results": [
             [r["athlete_id"], r["year"], r["pos"], r["finish"], r.get("swim"), r.get("t1"),
@@ -392,7 +464,7 @@ def main() -> None:
     out = ["-- Generálva: scripts/build_data.py. NE szerkeszd kézzel, futtasd újra a szkriptet.",
            "-- Futtatás: Supabase -> SQL Editor -> New query -> beillesztés -> Run",
            "begin;",
-           "truncate public.results, public.athletes restart identity;"]
+           "truncate public.results, public.athletes restart identity cascade;"]
     alist = sorted(athletes.values(), key=lambda a: a["id"])
     for i in range(0, len(alist), 1000):
         out.append("insert into public.athletes (id, name, birth_year, sex) values")
@@ -415,6 +487,31 @@ def main() -> None:
     out.append("commit;")
     (ROOT / "supabase" / "seed.sql").write_text("\n".join(out) + "\n", encoding="utf-8")
 
+    # ---- további versenyek: data/other.json (tartalék) + supabase/seed_races.sql ----
+    ridx = {r["key"]: i for i, r in enumerate(races)}
+    other = {
+        "races": [[r["key"], r["year"], r["series"], r["series_name"], r["name"], r["seg_labels"], r["n"], r["best"], r["median"]] for r in races],
+        "athletes": [[a["id"], a["name"], a["birth_year"], a["sex"]]
+                     for a in sorted(athletes.values(), key=lambda a: a["id"]) if a["id"] not in core_ids],
+        "results": [[ridx[r["race"]], r["athlete_id"], r["pos"], r["sex_rank"], r["finish"], r["segs"], r["club"]] for r in race_results],
+    }
+    (DATA / "other.json").write_text(json.dumps(other, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    rs = ["-- Generálva: scripts/build_data.py. Futtatás: Supabase -> SQL Editor -> Run (a seed.sql UTÁN)",
+          "begin;", "truncate public.race_results, public.races;"]
+    if races:
+        rs.append("insert into public.races (key, year, series, series_name, name, seg_labels, n, best_s, median_s) values")
+        rs.append(",\n".join(
+            f"({sql_str(r['key'])},{r['year']},{sql_str(r['series'])},{sql_str(r['series_name'])},{sql_str(r['name'])},"
+            f"{sql_str(json.dumps(r['seg_labels'], ensure_ascii=False))},{r['n']},{sql_num(r['best'])},{sql_num(r['median'])})"
+            for r in races) + ";")
+    for i in range(0, len(race_results), 1000):
+        rs.append("insert into public.race_results (race_key, athlete_id, pos, sex_rank, finish_s, segs, club) values")
+        rs.append(",\n".join(
+            f"({sql_str(r['race'])},{r['athlete_id']},{r['pos']},{sql_num(r['sex_rank'])},{r['finish']},"
+            f"{sql_str(json.dumps(r['segs']))},{sql_str(r['club'])})" for r in race_results[i:i + 1000]) + ";")
+    rs.append("commit;")
+    (ROOT / "supabase" / "seed_races.sql").write_text("\n".join(rs) + "\n", encoding="utf-8")
+
     # ---- köztes mérőpontok (data/laps/<év>.json, rajtszám szerint) ----
     # Tömör forma: versenyzőnként [[összidő_mp, helyezés], ...] – a köridő a
     # különbségekből számolható. Kimenet:
@@ -422,11 +519,11 @@ def main() -> None:
     #   supabase/seed_laps.sql  a Supabase lap_points + result_laps táblákhoz
     by_bib = {(r["year"], r.get("bib")): r["athlete_id"] for r in results if r.get("bib") is not None}
     out_dir = DATA / "splits"
-    lap_sql = ["-- Generálva: scripts/build_data.py. Futtatás: Supabase -> SQL Editor -> Run",
-               "begin;", "truncate public.lap_points, public.result_laps;"]
+    lap_years = []  # évenkénti SQL utasítások (két fájlba osztva, hogy beférjen az SQL Editorba)
     for f in sorted((DATA / "laps").glob("*.json")) if (DATA / "laps").exists() else []:
         lp = json.loads(f.read_text(encoding="utf-8"))
         year = lp["year"]
+        normalize_points(lp["points"])
         compact = {}
         for bib, pts in lp["athletes"].items():
             if (year, int(bib)) in by_bib:  # csak a célba érkezők
@@ -436,15 +533,40 @@ def main() -> None:
         (out_dir / f"{year}.json").write_text(
             json.dumps({"year": year, "points": lp["points"], "athletes": ath}, ensure_ascii=False, separators=(",", ":")),
             encoding="utf-8")
-        lap_sql.append("insert into public.lap_points (year, idx, label, disc, km) values")
-        lap_sql.append(",\n".join(f"({year},{i},{sql_str(p['label'])},{sql_str(p['disc'])},{'null' if p['km'] is None else p['km']})"
-                                   for i, p in enumerate(lp["points"])) + ";")
+        yl = ["insert into public.lap_points (year, idx, label, disc, km) values",
+              ",\n".join(f"({year},{i},{sql_str(p['label'])},{sql_str(p['disc'])},{'null' if p['km'] is None else p['km']})"
+                         for i, p in enumerate(lp["points"])) + ";"]
         if compact:
-            lap_sql.append("insert into public.result_laps (year, bib, laps) values")
-            lap_sql.append(",\n".join(f"({year},{b},'{json.dumps(v, separators=(',', ':'))}')" for b, v in sorted(compact.items())) + ";")
+            yl += ["insert into public.result_laps (year, bib, laps) values",
+                   ",\n".join(f"({year},{b},'{json.dumps(v, separators=(',', ':'))}')" for b, v in sorted(compact.items())) + ";"]
+        lap_years.append((year, yl))
         print(f"Köztes mérőpontok {year}: {len(ath)} célba érkező, {len(lp['points'])} mérőpont")
-    lap_sql.append("commit;")
-    (ROOT / "supabase" / "seed_laps.sql").write_text("\n".join(lap_sql) + "\n", encoding="utf-8")
+    # részekre osztás (legfeljebb ~650 KB / fájl), hogy beférjen a Supabase SQL Editorba
+    parts, cur, size = [], [], 0
+    for y, yl in lap_years:
+        n = len("\n".join(yl))
+        if cur and size + n > 650_000:
+            parts.append(cur)
+            cur, size = [], 0
+        cur.append((y, yl))
+        size += n
+    if cur:
+        parts.append(cur)
+    for old in (ROOT / "supabase").glob("seed_laps*.sql"):
+        old.unlink()
+    for k, part in enumerate(parts, start=1):
+        ys = [y for y, _ in part]
+        fname = "seed_laps.sql" if k == 1 else f"seed_laps_{k}.sql"
+        body = [f"-- Generálva: scripts/build_data.py. Köridők {ys[0]}–{ys[-1]} ({k}/{len(parts)}. rész).",
+                f"-- Futtatás: Supabase -> SQL Editor -> Run, a részek sorrendjében (seed_laps.sql, seed_laps_2.sql, ...)",
+                "begin;"]
+        body.append("truncate public.lap_points, public.result_laps;" if k == 1 else
+                    f"delete from public.lap_points where year between {ys[0]} and {ys[-1]}; "
+                    f"delete from public.result_laps where year between {ys[0]} and {ys[-1]};")
+        for _, yl in part:
+            body += yl
+        body.append("commit;")
+        (ROOT / "supabase" / fname).write_text("\n".join(body) + "\n", encoding="utf-8")
 
     print(f"Összesen: {len(athletes)} versenyző, {len(results)} eredmény "
           f"({sum(1 for r in results if r.get('swim') is not None)} részidővel)")

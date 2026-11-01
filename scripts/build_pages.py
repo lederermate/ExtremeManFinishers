@@ -101,11 +101,31 @@ def main() -> None:
         a["res"].sort(key=lambda r: r["year"])
         a["path"] = f"versenyzo/{a['id']}-{slug(a['name'])}/"
 
-    years_html = ('<p class="footer-years">Eredmények évenként: '
-                  + " ".join(f'<a href="ev/{y}/">{y}</a>' for y in reversed(years)) + "</p>")
+    # további eXtremeMan versenyek (data/other.json, build_data.py)
+    od_path = ROOT / "data" / "other.json"
+    od = json.loads(od_path.read_text(encoding="utf-8")) if od_path.exists() else {"races": [], "athletes": [], "results": []}
+    RACES = [{"key": k, "year": y, "series": sr, "series_name": sn, "name": nm, "segs": sl, "n": n, "best": b, "median": md, "res": []}
+             for k, y, sr, sn, nm, sl, n, b, md in od["races"]]
+    for aid, name, by, sex in od["athletes"]:
+        A[aid] = {"id": aid, "name": name, "by": by, "sex": sex, "res": [], "path": f"versenyzo/{aid}-{slug(name)}/"}
+    for a in A.values():
+        a["other"] = []
+    for ri, aid, pos, sex_rank, t, segs, club in od["results"]:
+        x = {"race": RACES[ri], "a": A[aid], "pos": pos, "t": t, "segs": segs, "club": club}
+        RACES[ri]["res"].append(x)
+        A[aid]["other"].append(x)
+    for rc in RACES:
+        rc["res"].sort(key=lambda x: x["pos"])
+        rc["path"] = f"verseny/{rc['key']}/"
+    for a in A.values():
+        a["other"].sort(key=lambda x: (-x["race"]["year"], x["race"]["series_name"], x["race"]["name"]))
+
+    years_html = ('<p class="footer-years">Nagyatád, teljes táv, évenként: '
+                  + " ".join(f'<a href="ev/{y}/">{y}</a>' for y in reversed(years))
+                  + ' · <a href="versenyek/">További eXtremeMan versenyek</a></p>')
 
     # régi generált oldalak törlése (pl. átnevezett versenyző)
-    for sub in ("versenyzo", "ev"):
+    for sub in ("versenyzo", "ev", "verseny", "versenyek"):
         if (ROOT / sub).exists():
             shutil.rmtree(ROOT / sub)
 
@@ -183,56 +203,145 @@ def main() -> None:
         urls.append((url, "0.6"))
 
     # ---------------- versenyzői oldalak ----------------
-    for a in A.values():
-        res = a["res"]
-        if not res:
-            continue
-        b = min(res, key=lambda r: r["t"])
-        first, last = res[0]["year"], res[-1]["year"]
-        span = str(first) if first == last else f"{first} és {last} között"
-        splits = any(r["swim"] is not None for r in res)
+    def other_table(items):
         rows = "".join(
-            f'<tr><td><a href="ev/{r["year"]}/">{r["year"]}</a></td><td class="r"><b>{fmt(r["t"])}</b></td>'
-            f'<td class="r">{r["pos"]}. / {len(Y[r["year"]])}</td>'
-            + (f'<td class="r">{fmt(r["swim"])}</td><td class="r">{fmt(r["bike"])}</td><td class="r">{fmt(r["run"])}</td>' if splits else "")
-            + "</tr>"
-            for r in reversed(res))
-        head = ('<th class="r">Úszás</th><th class="r">Kerékpár</th><th class="r">Futás</th>' if splits else "")
-        club = next((r["club"] for r in reversed(res) if r["club"]), None)
-        lead = " · ".join(x for x in [
-            f"Született {a['by']}" if a["by"] else "", esc(club) if club else "",
-            f"{len(res)}× célba ért az eXtremeMan Nagyatád teljes távján {span}"] if x)
-        content = f"""
+            f'<tr><td>{x["race"]["year"]}</td><td>{esc(x["race"]["series_name"])}</td>'
+            f'<td><a href="{x["race"]["path"]}">{esc(x["race"]["name"])}</a></td>'
+            f'<td class="r"><b>{fmt(x["t"])}</b></td><td class="r">{x["pos"]}. / {x["race"]["n"]}</td></tr>'
+            for x in items)
+        return (f'<section class="card"><h2>További eXtremeMan versenyek</h2><div class="table-wrap"><table>'
+                f'<thead><tr><th>Év</th><th>Verseny</th><th>Táv</th><th class="r">Célidő</th><th class="r">Helyezés</th></tr></thead>'
+                f'<tbody>{rows}</tbody></table></div></section>')
+
+    n_core = n_side = 0
+    for a in A.values():
+        res, oth = a["res"], a["other"]
+        if not res and not oth:
+            continue
+        url = SITE + a["path"]
+        club = next((r["club"] for r in reversed(res) if r["club"]), None) or next((x["club"] for x in oth if x["club"]), None)
+        other_txt = ", ".join(f"{x['race']['series_name']} {x['race']['year']}" for x in oth[:4])
+        if res:
+            n_core += 1
+            b = min(res, key=lambda r: r["t"])
+            first, last = res[0]["year"], res[-1]["year"]
+            span = str(first) if first == last else f"{first} és {last} között"
+            splits = any(r["swim"] is not None for r in res)
+            rows = "".join(
+                f'<tr><td><a href="ev/{r["year"]}/">{r["year"]}</a></td><td class="r"><b>{fmt(r["t"])}</b></td>'
+                f'<td class="r">{r["pos"]}. / {len(Y[r["year"]])}</td>'
+                + (f'<td class="r">{fmt(r["swim"])}</td><td class="r">{fmt(r["bike"])}</td><td class="r">{fmt(r["run"])}</td>' if splits else "")
+                + "</tr>"
+                for r in reversed(res))
+            head = ('<th class="r">Úszás</th><th class="r">Kerékpár</th><th class="r">Futás</th>' if splits else "")
+            lead = " · ".join(x for x in [
+                f"Született {a['by']}" if a["by"] else "", esc(club) if club else "",
+                f"{len(res)}× célba ért az eXtremeMan Nagyatád teljes távján {span}"] if x)
+            content = f"""
     <div class="page-head">
       <div class="eyebrow"><a href="#/">← Finisherek</a></div>
       <h1>{esc(a['name'])}</h1>
       <p class="lead">{lead}. Legjobb ideje {fmt(b['t'])} ({b['year']}, {b['pos']}. hely).</p>
     </div>
-    <section class="card"><h2>Eredmények</h2><div class="table-wrap"><table>
+    <section class="card"><h2>Nagyatád – teljes táv</h2><div class="table-wrap"><table>
       <thead><tr><th>Év</th><th class="r">Célidő</th><th class="r">Helyezés</th>{head}</tr></thead>
-      <tbody>{rows}</tbody></table></div></section>"""
-        url = SITE + a["path"]
-        times = ", ".join(f"{r['year']}: {fmt(r['t'])}" for r in reversed(res[-3:]))
+      <tbody>{rows}</tbody></table></div></section>{other_table(oth) if oth else ''}"""
+            times = ", ".join(f"{r['year']}: {fmt(r['t'])}" for r in reversed(res[-3:]))
+            title = f"{a['name']} – eXtremeMan Nagyatád eredmények"
+            desc = (f"{a['name']} {len(res)}× teljesítette az eXtremeMan Nagyatád teljes távját ({span}). "
+                    f"Legjobb idő: {fmt(b['t'])} ({b['year']}). Eredmények: {times}."
+                    + (f" További versenyek: {other_txt}." if oth else ""))
+            crumb = ("Finisherek", SITE)
+        else:
+            n_side += 1
+            ys = [x["race"]["year"] for x in oth]
+            span = str(min(ys)) if min(ys) == max(ys) else f"{min(ys)} és {max(ys)} között"
+            lead = " · ".join(x for x in [
+                f"Született {a['by']}" if a["by"] else "", esc(club) if club else "",
+                f"{len(oth)} eXtremeMan verseny {span}"] if x)
+            content = f"""
+    <div class="page-head">
+      <div class="eyebrow"><a href="#/versenyek">← Versenyek</a></div>
+      <h1>{esc(a['name'])}</h1>
+      <p class="lead">{lead}.</p>
+    </div>{other_table(oth)}"""
+            title = f"{a['name']} – eXtremeMan eredmények"
+            desc = f"{a['name']} eXtremeMan eredményei ({span}): {other_txt}. Idők, helyezések, részidők."
+            crumb = ("Versenyek", SITE + "versenyek/")
         out = ROOT / a["path"] / "index.html"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(page(
-            depth=2,
-            title=f"{a['name']} – eXtremeMan Nagyatád eredmények",
-            description=(f"{a['name']} {len(res)}× teljesítette az eXtremeMan Nagyatád teljes távját ({span}). "
-                         f"Legjobb idő: {fmt(b['t'])} ({b['year']}). Eredmények: {times}."),
-            canonical=url, content=content, years_html=years_html, og_type="profile",
-            jsonld=[crumbs(("Finisherek", SITE), (a["name"], url)),
+            depth=2, title=title, description=desc, canonical=url, content=content, years_html=years_html,
+            og_type="profile",
+            jsonld=[crumbs(crumb, (a["name"], url)),
                     {"@context": "https://schema.org", "@type": "ProfilePage",
                      "mainEntity": {"@type": "Person", "name": a["name"]}, "url": url}],
         ), encoding="utf-8")
         urls.append((url, "0.5"))
+
+    # ---------------- versenyoldalak + Versenyek áttekintő ----------------
+    for rc in RACES:
+        rows = "".join(
+            f'<tr><td class="r">{x["pos"]}.</td><td><a href="{x["a"]["path"]}">{esc(x["a"]["name"])}</a></td>'
+            f'<td class="muted">{esc(x["club"] or "")}</td>'
+            + "".join(f'<td class="r">{fmt(v)}</td>' for v in x["segs"])
+            + f'<td class="r"><b>{fmt(x["t"])}</b></td></tr>'
+            for x in rc["res"])
+        head = "".join(f'<th class="r">{esc(l)}</th>' for l in rc["segs"])
+        w = rc["res"][0] if rc["res"] else None
+        title = f"{rc['series_name']} {rc['year']} – {rc['name']} eredmények | eXtremeMan"
+        content = f"""
+    <div class="page-head">
+      <div class="eyebrow"><a href="#/versenyek">← Versenyek</a></div>
+      <h1>{esc(rc['series_name'])} {rc['year']}</h1>
+      <p class="lead">{esc(rc['name'])} · {rc['n']} célba érkező{f" · győztes: {esc(w['a']['name'])} ({fmt(w['t'])})" if w else ''}.</p>
+    </div>
+    <section class="card"><div class="table-wrap"><table>
+      <thead><tr><th class="r">Hely</th><th>Név</th><th>Klub</th>{head}<th class="r">Célidő</th></tr></thead>
+      <tbody>{rows}</tbody></table></div></section>"""
+        url = SITE + rc["path"]
+        out = ROOT / rc["path"] / "index.html"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page(
+            depth=2, title=title,
+            description=(f"eXtremeMan {rc['series_name']} {rc['year']}, {rc['name']}: teljes eredménylista "
+                         f"({rc['n']} célba érkező" + (f", győztes {w['a']['name']} {fmt(w['t'])}" if w else "") + "), részidőkkel."),
+            canonical=url, content=content, years_html=years_html,
+            jsonld=[crumbs(("Versenyek", SITE + "versenyek/"), (f"{rc['series_name']} {rc['year']}", url))],
+        ), encoding="utf-8")
+        urls.append((url, "0.5"))
+
+    series = {}
+    for rc in RACES:
+        series.setdefault(rc["series"], {"name": rc["series_name"], "races": []})["races"].append(rc)
+    blocks = "".join(
+        f'<section class="card"><h2>{esc(sr["name"])}</h2>'
+        + "".join(f'<p><b>{y}</b>: ' + ", ".join(f'<a href="{rc["path"]}">{esc(rc["name"])}</a> ({rc["n"]})'
+                                              for rc in sr["races"] if rc["year"] == y) + "</p>"
+                  for y in sorted({rc["year"] for rc in sr["races"]}, reverse=True))
+        + "</section>"
+        for sr in sorted(series.values(), key=lambda sr: -len(sr["races"])))
+    out = ROOT / "versenyek" / "index.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page(
+        depth=1, title="Versenyek – eXtremeMan eredmények 2015 óta",
+        description=("Az összes eXtremeMan verseny eredménye 2015 óta: Nagyatád többi táva, Kaposvár, Gyékényes, "
+                     "Balatonszemes triatlon és duatlon, Tab, Velence, Székesfehérvár, Nágocs."),
+        canonical=SITE + "versenyek/",
+        content=f"""
+    <div class="page-head"><h1>eXtremeMan versenyek</h1>
+      <p class="lead">{len(RACES)} verseny, {sum(rc['n'] for rc in RACES)} célba érkezés 2015 óta.</p></div>{blocks}""",
+        years_html=years_html, jsonld=[crumbs(("Finisherek", SITE), ("Versenyek", SITE + "versenyek/"))],
+    ), encoding="utf-8")
+    urls.append((SITE + "versenyek/", "0.7"))
 
     today = date.today().isoformat()
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     sm += [f"  <url><loc>{esc(u)}</loc><lastmod>{today}</lastmod><priority>{p}</priority></url>" for u, p in urls]
     sm.append("</urlset>")
     (ROOT / "sitemap.xml").write_text("\n".join(sm) + "\n", encoding="utf-8")
-    print(f"Kész: index.html, {len(years)} év-oldal, {len(urls) - 1 - len(years)} versenyző-oldal, sitemap.xml ({len(urls)} URL)")
+    print(f"Kész: index.html, {len(years)} év-oldal, {n_core} nagyatádi + {n_side} további versenyző-oldal, "
+          f"{len(RACES)} versenyoldal, sitemap.xml ({len(urls)} URL)")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,1897 @@
+[
+ {
+  "key": "2015-kaposvar-extrememan-113-kaposvar",
+  "year": 2015,
+  "series": "kaposvar",
+  "name": "eXtremeMan 113 Kaposvár",
+  "n": 291,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 1. kör",
+   "Futás 2. kör",
+   "Futás 3. kör"
+  ]
+ },
+ {
+  "key": "2015-kaposvar-extrememan-25-75-kaposvar",
+  "year": 2015,
+  "series": "kaposvar",
+  "name": "eXtremeMan 25.75 Kaposvár",
+  "n": 78,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 1. kör",
+   "Futás 2. kör",
+   "Futás 3. kör"
+  ]
+ },
+ {
+  "key": "2016-kaposvar-2575",
+  "year": 2016,
+  "series": "kaposvar",
+  "name": "25.75 km",
+  "n": 94,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2016-velence-ii-extrememan-velence-51-5",
+  "year": 2016,
+  "series": "velence",
+  "name": "II. ExtremeMan Velence 51.5",
+  "n": 290,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2016-nagyatad-aquatlon-h",
+  "year": 2016,
+  "series": "nagyatad-aquatlon",
+  "name": "Hosszú táv",
+  "n": 18,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Úszás",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2016-nagyatad-aquatlon-r",
+  "year": 2016,
+  "series": "nagyatad-aquatlon",
+  "name": "Rövid Táv",
+  "n": 31,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Úszás",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2017-kaposvar-extrememan-113",
+  "year": 2017,
+  "series": "kaposvar",
+  "name": "eXtremeMan 113",
+  "n": 235,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2017-kaposvar-bm2575",
+  "year": 2017,
+  "series": "kaposvar",
+  "name": "BM eXtremeMan 25.75 km",
+  "n": 26,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2017-kaposvar-q30",
+  "year": 2017,
+  "series": "kaposvar",
+  "name": "Quadrathlon 30 km",
+  "n": 20,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Depó 3",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2017-kaposvar-2575",
+  "year": 2017,
+  "series": "kaposvar",
+  "name": "eXtremeMan 25.75 km",
+  "n": 36,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2017-velence-extrememan-velence-51-5",
+  "year": 2017,
+  "series": "velence",
+  "name": "ExtremeMan Velence 51.5",
+  "n": 265,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2017-nagyatad-aquatlon-2100",
+  "year": 2017,
+  "series": "nagyatad-aquatlon",
+  "name": "13 évesek vagy idősebbek",
+  "n": 14,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Úszás",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2018-nagyatad-aquatlon-2100",
+  "year": 2018,
+  "series": "nagyatad-aquatlon",
+  "name": "13 évesek vagy idősebbek",
+  "n": 23,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Úszás",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2018-nagocs-ob",
+  "year": 2018,
+  "series": "nagocs",
+  "name": "OB",
+  "n": 84,
+  "segs": [
+   "Első Futás",
+   "Kerékpár",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2018-nagocs-sprint",
+  "year": 2018,
+  "series": "nagocs",
+  "name": "Sprint",
+  "n": 46,
+  "segs": [
+   "Első Futás",
+   "Kerékpár",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2018-szekesfehervar-extrememan-51-5-szekesfehervar",
+  "year": 2018,
+  "series": "szekesfehervar",
+  "name": "eXtremeMan 51.5 Székesfehérvár",
+  "n": 268,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2018-kaposvar-q30",
+  "year": 2018,
+  "series": "kaposvar",
+  "name": "Quadrathlon sprint táv",
+  "n": 27,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2018-kaposvar-t25-75",
+  "year": 2018,
+  "series": "kaposvar",
+  "name": "TerepTriathlon sprint táv",
+  "n": 27,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2018-kaposvar-25-75",
+  "year": 2018,
+  "series": "kaposvar",
+  "name": "Triathlon sprint táv",
+  "n": 69,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2018-kaposvar-extrememan113-kaposvar",
+  "year": 2018,
+  "series": "kaposvar",
+  "name": "eXtrememan113 Kaposvár",
+  "n": 189,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2019-kaposvar-extrememan-113-kaposvar",
+  "year": 2019,
+  "series": "kaposvar",
+  "name": "ExtremeMan 113 Kaposvár",
+  "n": 252,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2019-kaposvar-extrememan-q30-kaposvar",
+  "year": 2019,
+  "series": "kaposvar",
+  "name": "eXtremeMan Q30 Kaposvár",
+  "n": 52,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Depó 3",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2019-szekesfehervar-extrememan-szekesfehervar",
+  "year": 2019,
+  "series": "szekesfehervar",
+  "name": "ExtremeMan Székesfehérvár",
+  "n": 308,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2020-kaposvar-t25",
+  "year": 2020,
+  "series": "kaposvar",
+  "name": "eXtremeMan 25.75 sprint triatlon amatőr kupa",
+  "n": 63,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2020-kaposvar-t51",
+  "year": 2020,
+  "series": "kaposvar",
+  "name": "eXtremeMan 51.5 rövidtávú triatlon amatőr kupa",
+  "n": 113,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2020-kaposvar-q30",
+  "year": 2020,
+  "series": "kaposvar",
+  "name": "eXtremeMan Q30 Quadrathlon Sprint EB",
+  "n": 57,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Kajak",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2020-kaposvar-t113",
+  "year": 2020,
+  "series": "kaposvar",
+  "name": "eXtremeMan113 középtávú triatlon",
+  "n": 168,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2021-tab-d20",
+  "year": 2021,
+  "series": "tab",
+  "name": "D20",
+  "n": 34,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2021-tab-d80",
+  "year": 2021,
+  "series": "tab",
+  "name": "D80",
+  "n": 86,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2021-kaposvar-t25d",
+  "year": 2021,
+  "series": "kaposvar",
+  "name": "25.75 triatlon konvertálva duatlonra",
+  "n": 74,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2021-kaposvar-bmd",
+  "year": 2021,
+  "series": "kaposvar",
+  "name": "BM OB triatlon konvertálva duatlonra",
+  "n": 11,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2021-kaposvar-q30d",
+  "year": 2021,
+  "series": "kaposvar",
+  "name": "Q30 konvertálva duatlonra",
+  "n": 21,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2021-kaposvar-t113d",
+  "year": 2021,
+  "series": "kaposvar",
+  "name": "113 triatlon konvertálva duatlonra",
+  "n": 132,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2021-kaposvar-q135d",
+  "year": 2021,
+  "series": "kaposvar",
+  "name": "Q135 konvertálva duatlonra",
+  "n": 8,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2021-szekesfehervar-extrememan-szekesfehervar",
+  "year": 2021,
+  "series": "szekesfehervar",
+  "name": "eXtremeMan Székesfehérvár",
+  "n": 166,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2022-gyekenyes-extrememan-51-5-gyekenyes",
+  "year": 2022,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 51.5 Gyékényes",
+  "n": 101,
+  "segs": [
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2022-nagyatad-e985",
+  "year": 2022,
+  "series": "nagyatad",
+  "name": "98.5",
+  "n": 47,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2022-nagyatad-fm",
+  "year": 2022,
+  "series": "nagyatad",
+  "name": "Fél maraton",
+  "n": 2,
+  "segs": [
+   "Futás 1. kör",
+   "Futás 2. kör",
+   "Futás 3. kör"
+  ]
+ },
+ {
+  "key": "2022-nagyatad-ma",
+  "year": 2022,
+  "series": "nagyatad",
+  "name": "Maraton",
+  "n": 2,
+  "segs": [
+   "Futás 1. kör",
+   "Futás 2. kör",
+   "Futás 3. kör",
+   "Futás 4. kör",
+   "Futás 5. kör",
+   "Futás 6. kör",
+   "Futás 7. kör"
+  ]
+ },
+ {
+  "key": "2022-nagyatad-nm",
+  "year": 2022,
+  "series": "nagyatad",
+  "name": "Negyed maraton",
+  "n": 11,
+  "segs": [
+   "Futás 1. kör"
+  ]
+ },
+ {
+  "key": "2022-nagyatad-nym",
+  "year": 2022,
+  "series": "nagyatad",
+  "name": "Nyolcad maraton",
+  "n": 24,
+  "segs": []
+ },
+ {
+  "key": "2022-tab-d20",
+  "year": 2022,
+  "series": "tab",
+  "name": "D20",
+  "n": 11,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2022-tab-d80",
+  "year": 2022,
+  "series": "tab",
+  "name": "D80",
+  "n": 84,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2022-kaposvar-b",
+  "year": 2022,
+  "series": "kaposvar",
+  "name": "BM eXtremeMan25.75 OB",
+  "n": 20,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2022-kaposvar-e",
+  "year": 2022,
+  "series": "kaposvar",
+  "name": "eXtremeMan 113",
+  "n": 79,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2022-kaposvar-s",
+  "year": 2022,
+  "series": "kaposvar",
+  "name": "eXtremeMan25.75",
+  "n": 32,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2022-kaposvar-q",
+  "year": 2022,
+  "series": "kaposvar",
+  "name": "eXtremeManQ30",
+  "n": 13,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2023-nagyatad-q135",
+  "year": 2023,
+  "series": "nagyatad",
+  "name": "eXtremeManQ135",
+  "n": 8,
+  "segs": [
+   "Úszás",
+   "Kajak",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2023-nagyatad-e985",
+  "year": 2023,
+  "series": "nagyatad",
+  "name": "eXtremeMan  98.5",
+  "n": 61,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2023-nagyatad-fm",
+  "year": 2023,
+  "series": "nagyatad",
+  "name": "Fél maraton",
+  "n": 5,
+  "segs": [
+   "Futás 1. kör",
+   "Futás 2. kör",
+   "Futás 3. kör"
+  ]
+ },
+ {
+  "key": "2023-nagyatad-ma",
+  "year": 2023,
+  "series": "nagyatad",
+  "name": "Maraton",
+  "n": 1,
+  "segs": [
+   "Futás 1. kör",
+   "Futás 2. kör",
+   "Futás 3. kör",
+   "Futás 4. kör",
+   "Futás 5. kör",
+   "Futás 6. kör",
+   "Futás 7. kör"
+  ]
+ },
+ {
+  "key": "2023-nagyatad-nm",
+  "year": 2023,
+  "series": "nagyatad",
+  "name": "Negyed maraton",
+  "n": 12,
+  "segs": [
+   "Futás 1. kör"
+  ]
+ },
+ {
+  "key": "2023-nagyatad-nym",
+  "year": 2023,
+  "series": "nagyatad",
+  "name": "Nyolcad maraton",
+  "n": 13,
+  "segs": []
+ },
+ {
+  "key": "2023-tab-tab-extrememand80-kozeptavu-duatlon-ob",
+  "year": 2023,
+  "series": "tab",
+  "name": "Tab - eXtremeManD80 Középtávú Duatlon OB",
+  "n": 47,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2024-nagyatad-q104",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "eXtremeManQ104",
+  "n": 10,
+  "segs": [
+   "Úszás",
+   "Kajak",
+   "Depó 1",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-nagyatad-kvr",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - futás",
+  "n": 23,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-nagyatad-kvb",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - kerékpár",
+  "n": 52,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-nagyatad-kvs",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - úszás",
+  "n": 13,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-nagyatad-itt",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "ITT 30 Km",
+  "n": 18,
+  "segs": []
+ },
+ {
+  "key": "2024-nagyatad-f50",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "50 Km OB",
+  "n": 12,
+  "segs": []
+ },
+ {
+  "key": "2024-nagyatad-f42",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "42.2 Km",
+  "n": 5,
+  "segs": []
+ },
+ {
+  "key": "2024-nagyatad-f10",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "10.5 Km",
+  "n": 13,
+  "segs": []
+ },
+ {
+  "key": "2024-nagyatad-f21",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "21.1 Km",
+  "n": 8,
+  "segs": []
+ },
+ {
+  "key": "2024-nagyatad-f05",
+  "year": 2024,
+  "series": "nagyatad",
+  "name": "5.2 Km",
+  "n": 17,
+  "segs": []
+ },
+ {
+  "key": "2024-balatonszemes-duatlon-d80",
+  "year": 2024,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D80 – középtávú duatlon OB",
+  "n": 116,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2024-balatonszemes-duatlon-d40",
+  "year": 2024,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D40",
+  "n": 16,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2024-balatonszemes-duatlon-d40pt",
+  "year": 2024,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan Próbáld ki a duatlont 40",
+  "n": 13,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2024-balatonszemes-duatlon-d16",
+  "year": 2024,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D16,6",
+  "n": 6,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2024-balatonszemes-duatlon-d16pt",
+  "year": 2024,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan Próbáld ki a duatlont 16,6",
+  "n": 12,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2024-balatonszemes-duatlon-itt",
+  "year": 2024,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan ITT30",
+  "n": 7,
+  "segs": []
+ },
+ {
+  "key": "2024-kaposvar-113",
+  "year": 2024,
+  "series": "kaposvar",
+  "name": "eXtremeMan 113",
+  "n": 44,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-kaposvar-21-9",
+  "year": 2024,
+  "series": "kaposvar",
+  "name": "eXtremeMan 21.9",
+  "n": 18,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-kaposvar-10km",
+  "year": 2024,
+  "series": "kaposvar",
+  "name": "eXtremeMan Futófesztivál 10K",
+  "n": 6,
+  "segs": []
+ },
+ {
+  "key": "2024-kaposvar-21km",
+  "year": 2024,
+  "series": "kaposvar",
+  "name": "eXtremeMan Futófesztivál 21K",
+  "n": 3,
+  "segs": []
+ },
+ {
+  "key": "2024-kaposvar-3-5km",
+  "year": 2024,
+  "series": "kaposvar",
+  "name": "eXtremeMan Futófesztivál 3,5K",
+  "n": 12,
+  "segs": []
+ },
+ {
+  "key": "2024-kaposvar-itt18",
+  "year": 2024,
+  "series": "kaposvar",
+  "name": "eXtremeMan ITT 18",
+  "n": 10,
+  "segs": []
+ },
+ {
+  "key": "2024-gyekenyes-tp",
+  "year": 2024,
+  "series": "gyekenyes",
+  "name": "Próbáld ki a triatlont",
+  "n": 3,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-gyekenyes-t2",
+  "year": 2024,
+  "series": "gyekenyes",
+  "name": "eXtremeMan25.75",
+  "n": 19,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-gyekenyes-t5",
+  "year": 2024,
+  "series": "gyekenyes",
+  "name": "eXtremeMan51.5",
+  "n": 54,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2024-gyekenyes-q",
+  "year": 2024,
+  "series": "gyekenyes",
+  "name": "eXtremeManQ30",
+  "n": 20,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-gyekenyes-t25",
+  "year": 2025,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 25.75",
+  "n": 26,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-gyekenyes-t25p",
+  "year": 2025,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 25.75 - Próbáld ki",
+  "n": 8,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-gyekenyes-t51",
+  "year": 2025,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 51.5",
+  "n": 69,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-gyekenyes-t51p",
+  "year": 2025,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 51.5 - Próbáld ki",
+  "n": 10,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-gyekenyes-q61",
+  "year": 2025,
+  "series": "gyekenyes",
+  "name": "eXtremeMan Q61.5",
+  "n": 11,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-kaposvar-1k",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Futás - 1,6 km",
+  "n": 9,
+  "segs": []
+ },
+ {
+  "key": "2025-kaposvar-3k",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Futás - 3,2 km",
+  "n": 3,
+  "segs": []
+ },
+ {
+  "key": "2025-kaposvar-5k",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Futás - 5 km",
+  "n": 9,
+  "segs": []
+ },
+ {
+  "key": "2025-kaposvar-sp",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Próbáld ki a triatlont - Sprint",
+  "n": 19,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-kaposvar-szp",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Próbáld ki a triatlont - Szuper Sprint",
+  "n": 7,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-kaposvar-s",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Sprint táv",
+  "n": 56,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-kaposvar-sz",
+  "year": 2025,
+  "series": "kaposvar",
+  "name": "Szuper Sprint táv",
+  "n": 5,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-nagyatad-q104",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "eXtremeManQ104",
+  "n": 6,
+  "segs": [
+   "Úszás",
+   "Kajak",
+   "Depó 1",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-nagyatad-kvr",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - futás",
+  "n": 28,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-nagyatad-kv1",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - handbike",
+  "n": 1,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-nagyatad-kvb",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - kerékpár",
+  "n": 46,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-nagyatad-kvs",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - úszás",
+  "n": 10,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-nagyatad-f50",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "50 Km OB",
+  "n": 9,
+  "segs": []
+ },
+ {
+  "key": "2025-nagyatad-f42",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "42.2 Km",
+  "n": 1,
+  "segs": []
+ },
+ {
+  "key": "2025-nagyatad-f10",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "10.5 Km",
+  "n": 12,
+  "segs": []
+ },
+ {
+  "key": "2025-nagyatad-f21",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "21.1 Km",
+  "n": 3,
+  "segs": []
+ },
+ {
+  "key": "2025-nagyatad-f05",
+  "year": 2025,
+  "series": "nagyatad",
+  "name": "5.2 Km",
+  "n": 18,
+  "segs": []
+ },
+ {
+  "key": "2025-balatonszemes-duatlon-nsob",
+  "year": 2025,
+  "series": "balatonszemes-duatlon",
+  "name": "Női sprint OB",
+  "n": 18,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-duatlon-d80",
+  "year": 2025,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D80 – középtávú duatlon OB",
+  "n": 96,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-duatlon-d40",
+  "year": 2025,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D40",
+  "n": 30,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-duatlon-d80p",
+  "year": 2025,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D80 -- Próbáld ki a duatlont!",
+  "n": 5,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-duatlon-d15",
+  "year": 2025,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D15",
+  "n": 11,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-113",
+  "year": 2025,
+  "series": "balatonszemes",
+  "name": "eXtremeMan 113",
+  "n": 83,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-p113",
+  "year": 2025,
+  "series": "balatonszemes",
+  "name": "eXtremeMan 113 - Próbáld ki a triatlont",
+  "n": 25,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-p49",
+  "year": 2025,
+  "series": "balatonszemes",
+  "name": "eXtremeMan49.5 - Próbáld ki a triatlont",
+  "n": 45,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2025-balatonszemes-p17",
+  "year": 2025,
+  "series": "balatonszemes",
+  "name": "eXtremeMan17 - Próbáld ki a triatlont",
+  "n": 8,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-gyekenyes-t25",
+  "year": 2026,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 25.75",
+  "n": 18,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-gyekenyes-t25p",
+  "year": 2026,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 25.75 - Próbáld ki",
+  "n": 9,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-gyekenyes-t51",
+  "year": 2026,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 51.5",
+  "n": 49,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-gyekenyes-t51d",
+  "year": 2026,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 51.5 - Duatlon",
+  "n": 2,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-gyekenyes-t51p",
+  "year": 2026,
+  "series": "gyekenyes",
+  "name": "eXtremeMan 51.5 - Próbáld ki",
+  "n": 10,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-gyekenyes-q61",
+  "year": 2026,
+  "series": "gyekenyes",
+  "name": "eXtremeMan Q61.5",
+  "n": 22,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Kajak",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-kaposvar-sp",
+  "year": 2026,
+  "series": "kaposvar",
+  "name": "Próbáld ki a triatlont - Sprint",
+  "n": 25,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-kaposvar-s",
+  "year": 2026,
+  "series": "kaposvar",
+  "name": "Sprint táv",
+  "n": 70,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-kaposvar-sz",
+  "year": 2026,
+  "series": "kaposvar",
+  "name": "Szuper Sprint táv",
+  "n": 7,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-q104",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "eXtremeManQ128",
+  "n": 8,
+  "segs": [
+   "Úszás",
+   "Kajak",
+   "Depó 1",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-kvs",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Ibio eXtremeMan Középtáv variációk - úszás",
+  "n": 6,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-kvc",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Ibio-eXtremeMan Középtáv variációk - classic",
+  "n": 19,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-kvr",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Ibio-eXtremeMan Középtáv variációk - futás",
+  "n": 12,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-kvb",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Ibio-eXtremeMan Középtáv variációk - kerékpár",
+  "n": 47,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-ptkvc",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Próbáld ki - Középtáv variációk - classic",
+  "n": 18,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-ptkvr",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Próbáld ki - Középtáv variációk - futás",
+  "n": 4,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-ptkvb",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Próbáld ki - Középtáv variációk - kerékpár",
+  "n": 18,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-ptkvs",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "Próbáld ki - Középtáv variációk - úszás",
+  "n": 6,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-ptxman",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "eXtremeMan - Próbáld ki a triatlont",
+  "n": 9,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-nagyatad-f10",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "10.5 Km",
+  "n": 14,
+  "segs": []
+ },
+ {
+  "key": "2026-nagyatad-f21",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "21.1 Km",
+  "n": 5,
+  "segs": []
+ },
+ {
+  "key": "2026-nagyatad-f42",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "42.2 Km",
+  "n": 2,
+  "segs": []
+ },
+ {
+  "key": "2026-nagyatad-f05",
+  "year": 2026,
+  "series": "nagyatad",
+  "name": "5.2 Km",
+  "n": 29,
+  "segs": []
+ },
+ {
+  "key": "2026-balatonszemes-duatlon-d80",
+  "year": 2026,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D80 – középtávú duatlon OB",
+  "n": 98,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-duatlon-d40",
+  "year": 2026,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D40",
+  "n": 20,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-duatlon-d80pt",
+  "year": 2026,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D80 -- Próbáld ki a duatlont!",
+  "n": 9,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-duatlon-d40pt",
+  "year": 2026,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan Próbáld ki a duatlont 40",
+  "n": 27,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-duatlon-d15",
+  "year": 2026,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan D15",
+  "n": 2,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-duatlon-d15pt",
+  "year": 2026,
+  "series": "balatonszemes-duatlon",
+  "name": "eXtremeMan Próbáld ki a duatlont 15",
+  "n": 13,
+  "segs": [
+   "Futás 1",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás 2"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-h",
+  "year": 2026,
+  "series": "balatonszemes",
+  "name": "Haladó táv",
+  "n": 30,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-k",
+  "year": 2026,
+  "series": "balatonszemes",
+  "name": "Kezdő táv",
+  "n": 5,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-113",
+  "year": 2026,
+  "series": "balatonszemes",
+  "name": "eXtremeMan 113",
+  "n": 116,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-113p",
+  "year": 2026,
+  "series": "balatonszemes",
+  "name": "eXtremeMan 113 - Próbáld ki a triatlont",
+  "n": 17,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-hp",
+  "year": 2026,
+  "series": "balatonszemes",
+  "name": "Haladó táv - Próbáld ki a triatlont",
+  "n": 19,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ },
+ {
+  "key": "2026-balatonszemes-kp",
+  "year": 2026,
+  "series": "balatonszemes",
+  "name": "Kezdő táv - Próbáld ki a triatlont",
+  "n": 10,
+  "segs": [
+   "Úszás",
+   "Depó 1",
+   "Kerékpár",
+   "Depó 2",
+   "Futás"
+  ]
+ }
+]
