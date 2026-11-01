@@ -229,7 +229,9 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .split-cell.best { color: var(--accent-ink); font-weight: 600; }
 .split-cell.best small { color: var(--accent-ink); font-weight: 500; opacity: .8; }
 .split-table td[data-k] { cursor: default; }
-.minibar { display: flex; gap: 2px; width: 120px; height: 8px; }
+.minibar { display: flex; gap: 2px; width: 100%; min-width: 120px; height: 8px; }
+.split-table th:not(.c-bar), .split-table td:not(.c-bar) { width: 1%; }
+.split-table .c-bar { padding-right: 24px; }
 .minibar i { border-radius: 99px; min-width: 2px; }
 @media (max-width: 640px) { .split-table .c-bar { display: none; } }
 
