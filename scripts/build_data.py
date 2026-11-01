@@ -252,19 +252,78 @@ def fix_lap_gaps(points):
             prev = n
 
 
-def normalize_points_generic(points):
-    """Mint a normalize_points, de ismeretlen össztávval (további versenyek):
-    összesített km -> szakaszhossz, ha a sorozat növekvő és összege jóval nagyobb az utolsó értéknél."""
-    for disc in {p["disc"] for p in points}:
+# Kézi távjavítások (az EvoChip hibás adata): kulcs -> {mérőpont index: szakasz km}
+KM_FIX = {
+    "2024-balatonszemes-duatlon-itt": {1: 10.0},  # 3 × 10 km-es kör (ITT30), a 2. kör távja hibásan 3
+}
+KM_LABEL_RX = re.compile(r"(\d+(?:[.,]\d+)?)\s*km\b", re.I)
+KM_BARE_RX = re.compile(r"^[^\d(]*\s(\d+(?:[.,]\d+)?)\s*$")  # pl. "Kerékpár 92"
+
+
+def normalize_points_generic(points, athletes=None, key=None):
+    """Mint a normalize_points, de ismeretlen össztávval (további versenyek). A "km" a
+    SZAKASZ hossza legyen:
+      1. "Futás 0 kör" = depó (a futás kezdete), nem futószakasz;
+      2. ha a mérőpontok nevében km-jelölés van ("Kerékpár 26.5 Km"), az a rajttól (a
+         szakasz elejétől) mért táv – ez megbízhatóbb az EvoChip km-adatánál;
+      3. különben a növekvő km-sor lehet szakaszhossz vagy összesített táv: azt választjuk,
+         amelyiknél a mezőny medián tempója egyenletesebb."""
+    for p in points:
+        if re.search(r"(?<![\d.])0\.?\s*k[öo]r", p["label"], re.I):
+            p["disc"], p["km"] = "tr", None
+    seg_t = [None] * len(points)
+    if athletes:
+        for i in range(len(points)):
+            v = sorted(a[i][0] - (a[i - 1][0] if i else 0) for a in athletes.values()
+                       if i < len(a) and a[i][0] is not None and (i == 0 or a[i - 1][0] is not None))
+            v = [x for x in v if x > 0]
+            seg_t[i] = v[len(v) // 2] if len(v) >= 3 else None
+
+    def spread(idx, kms):
+        sp = [k / seg_t[i] for i, k in zip(idx, kms) if seg_t[i] and k and k > 0]
+        if len(sp) < len(idx) or len(sp) < 2:
+            return None
+        return max(sp) / min(sp)
+
+    for disc in {p["disc"] for p in points} - {"tr", None}:
         idx = [i for i, p in enumerate(points) if p["disc"] == disc]
+        lab = []
+        for i in idx:
+            l = points[i]["label"]
+            m = KM_LABEL_RX.search(l)
+            v = float(m.group(1).replace(",", ".")) if m else None
+            if v is None and disc != "swim" and not re.search(r"k[öo]r", l, re.I):
+                m = KM_BARE_RX.match(l)
+                v = float(m.group(1).replace(",", ".")) if m else None
+                v = v if v and v >= 5 else None
+            lab.append(v)
         kms = [points[i]["km"] for i in idx]
-        if len(kms) > 1 and all(k is not None for k in kms) and all(b > a for a, b in zip(kms, kms[1:])) \
-                and sum(kms) > kms[-1] * 1.3:
-            prev = 0.0
-            for i in idx:
-                cum = points[i]["km"]
-                points[i]["km"] = round(cum - prev, 3)
-                prev = cum
+        cands = []  # (név, szakaszhosszak) – a legegyenletesebb tempót adó nyer
+        known = [v for v in lab if v is not None]
+        if known and None not in lab[:-1] and all(b > a for a, b in zip(known, known[1:])) \
+                and (len(idx) == 1 or len(known) >= 2):
+            prev, by_label = 0.0, []
+            for k, v in zip(kms, lab):
+                by_label.append(k if v is None else round(v - prev, 3))
+                prev = prev if v is None else v
+            cands.append(("label", by_label))
+        cands.append(("raw", kms))
+        if len(kms) > 1 and all(k is not None for k in kms) and all(b > a for a, b in zip(kms, kms[1:])):
+            cands.append(("cum", [round(b - a, 3) for a, b in zip([0.0] + kms, kms)]))
+        scored = [(spread(idx, c), n, c) for n, c in cands]
+        if all(s is not None for s, _, _ in scored):
+            best = min(scored, key=lambda x: x[0] - (0.05 if x[1] == "label" else 0))[2]
+        elif cands[0][0] == "label":
+            best = cands[0][1]
+        elif len(cands) > 1 and sum(kms) > kms[-1] * 1.3:
+            best = cands[1][1]
+        else:
+            best = kms
+        for i, k in zip(idx, best):
+            points[i]["km"] = k
+    for i, km in KM_FIX.get(key, {}).items():
+        if i < len(points):
+            points[i]["km"] = km
 
 
 def normalize_points(points):
@@ -798,7 +857,7 @@ def main() -> None:
         rkey = lp["key"]
         if rkey not in rr_by_bib or not lp["points"]:
             continue
-        normalize_points_generic(lp["points"])
+        normalize_points_generic(lp["points"], lp["athletes"], rkey)
         fix_lap_gaps(lp["points"])
         med = []
         for i in range(len(lp["points"])):
