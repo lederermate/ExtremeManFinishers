@@ -132,6 +132,9 @@ Kézi javítás a `data/overrides.json`-ban:
 
 ## Keresőoptimalizálás (SEO)
 
+- Címek: rendes URL-ek névvel (pl. `versenyzo/1794-kolonics-tamas/`, `ev/2019/`,
+  `verseny/2026-gyekenyes-t51/`); az app History API-val navigál, a régi `#/...`
+  linkeket átírja. Ismeretlen címre a `404.html` tölti be az appot.
 - Az oldal sablonja a `templates/page.html`; a `scripts/build_pages.py` ebből generálja
   a főoldalt (`index.html`), minden versenyzőnek egy saját oldalt
   (`versenyzo/<id>-<név>/`) és minden évnek egyet (`ev/<év>/`). A tartalom (név,

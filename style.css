@@ -364,3 +364,8 @@ main a.chip { color: var(--ink); }
 .race-year > b { font: 600 16px/2 Oswald, sans-serif; }
 .race-year .chips { margin: 0; }
 @media (max-width: 640px) { .nav a { padding: 6px 6px; font-size: 13px; letter-spacing: .02em; } }
+
+/* kimaradt évek: halvány, szaggatott szakasz; jelmagyarázat-kulcs */
+.chart .line.gap { stroke-dasharray: 3 5; opacity: .45; stroke-width: 1.5; }
+.key-dash { width: 18px; height: 0; border-top: 2px dashed currentColor; opacity: .6; display: inline-block; }
+.legend .key-dot[style*="surface-2"] { border: 1px solid var(--axis); }

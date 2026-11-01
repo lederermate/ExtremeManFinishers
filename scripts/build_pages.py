@@ -73,7 +73,9 @@ def page(*, depth: int, title: str, description: str, canonical: str, content: s
   <meta name="twitter:image" content="{OG_IMAGE}">
   {''.join(f'<script type="application/ld+json">{json.dumps(j, ensure_ascii=False)}</script>' for j in jsonld)}"""
     out = re.sub(r"<!--seo:start-->.*?<!--seo:end-->", seo, TEMPLATE, flags=re.S)
-    out = out.replace("<!--base-->", f'<base href="{base}">' if depth else "")
+    # a <base> minden oldalon a gyökérre mutat (a főoldalon is), így a relatív linkek
+    # a History API-s navigáció után is jó helyre vezetnek
+    out = out.replace("<!--base-->", f'<base href="{base or "./"}">')
     out = re.sub(r"<!--content:start-->.*?<!--content:end-->", content, out, flags=re.S)
     out = re.sub(r"<!--years:start-->.*?<!--years:end-->", years_html, out, flags=re.S)
     return out
@@ -125,7 +127,7 @@ def main() -> None:
                   + ' · <a href="versenyek/">További eXtremeMan versenyek</a></p>')
 
     # régi generált oldalak törlése (pl. átnevezett versenyző)
-    for sub in ("versenyzo", "ev", "verseny", "versenyek"):
+    for sub in ("versenyzo", "ev", "verseny", "versenyek", "evek", "rekordok"):
         if (ROOT / sub).exists():
             shutil.rmtree(ROOT / sub)
 
@@ -182,7 +184,7 @@ def main() -> None:
         w = rs[0]
         content = f"""
     <div class="page-head">
-      <div class="eyebrow"><a href="#/evek">← Évek</a></div>
+      <div class="eyebrow"><a href="evek/">← Évek</a></div>
       <h1>eXtremeMan Nagyatád {y} – eredmények</h1>
       <p class="lead">{len(rs)} célba érkező a teljes távon ({rookies} először). Győztes: {esc(w['a']['name'])} ({fmt(w['t'])}),
         medián idő: {fmt(med)}.</p>
@@ -199,7 +201,7 @@ def main() -> None:
             description=(f"Az eXtremeMan Nagyatád {y} teljes távú eredménylistája: {len(rs)} célba érkező, "
                          f"győztes {w['a']['name']} {fmt(w['t'])}" + (", részidőkkel." if splits else ".")),
             canonical=url, content=content, years_html=years_html,
-            jsonld=[crumbs(("Finisherek", SITE), ("Évek", SITE + "#/evek"), (str(y), url))],
+            jsonld=[crumbs(("Finisherek", SITE), ("Évek", SITE + "evek/"), (str(y), url))],
         ), encoding="utf-8")
         urls.append((url, "0.6"))
 
@@ -240,7 +242,7 @@ def main() -> None:
                 f"{len(res)}× célba ért az eXtremeMan Nagyatád teljes távján {span}"] if x)
             content = f"""
     <div class="page-head">
-      <div class="eyebrow"><a href="#/">← Finisherek</a></div>
+      <div class="eyebrow"><a href="./">← Finisherek</a></div>
       <h1>{esc(a['name'])}</h1>
       <p class="lead">{lead}. Legjobb ideje {fmt(b['t'])} ({b['year']}, {b['pos']}. hely).</p>
     </div>
@@ -262,7 +264,7 @@ def main() -> None:
                 f"{len(oth)} eXtremeMan verseny {span}"] if x)
             content = f"""
     <div class="page-head">
-      <div class="eyebrow"><a href="#/versenyek">← Versenyek</a></div>
+      <div class="eyebrow"><a href="versenyek/">← Versenyek</a></div>
       <h1>{esc(a['name'])}</h1>
       <p class="lead">{lead}.</p>
     </div>{other_table(oth)}"""
@@ -293,7 +295,7 @@ def main() -> None:
         title = f"{rc['series_name']} {rc['year']} – {rc['name']} eredmények | eXtremeMan"
         content = f"""
     <div class="page-head">
-      <div class="eyebrow"><a href="#/versenyek">← Versenyek</a></div>
+      <div class="eyebrow"><a href="versenyek/">← Versenyek</a></div>
       <h1>{esc(rc['series_name'])} {rc['year']}</h1>
       <p class="lead">{esc(rc['name'])} · {rc['n']} célba érkező{f" · győztes: {esc(w['a']['name'])} ({fmt(w['t'])})" if w else ''}.</p>
     </div>
@@ -335,6 +337,56 @@ def main() -> None:
         years_html=years_html, jsonld=[crumbs(("Finisherek", SITE), ("Versenyek", SITE + "versenyek/"))],
     ), encoding="utf-8")
     urls.append((SITE + "versenyek/", "0.7"))
+
+    # ---------------- Évek, Rekordok (statikus változat) ----------------
+    yrows = "".join(
+        f'<tr><td><a href="ev/{y}/">{y}</a></td><td class="r">{len(Y[y])}</td>'
+        f'<td><a href="{Y[y][0]["a"]["path"]}">{esc(Y[y][0]["a"]["name"])}</a></td><td class="r">{fmt(Y[y][0]["t"])}</td>'
+        f'<td class="r">{fmt(median([r["t"] for r in Y[y]]))}</td></tr>' for y in reversed(years))
+    out = ROOT / "evek" / "index.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page(
+        depth=1, title="Évek – eXtremeMan Nagyatád finisherek",
+        description=f"Az eXtremeMan Nagyatád teljes táv évenként {years[0]}–{years[-1]}: célba érkezők száma, győztesek, győztes és medián idők.",
+        canonical=SITE + "evek/", years_html=years_html,
+        content=f"""
+    <div class="page-head"><h1>Évek</h1><p class="lead">{len(years)} verseny, {n_res} célba érés.</p></div>
+    <section class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Év</th><th class="r">Célba érkezők</th><th>Győztes</th><th class="r">Győztes idő</th><th class="r">Medián</th></tr></thead>
+      <tbody>{yrows}</tbody></table></div></section>""",
+        jsonld=[crumbs(("Finisherek", SITE), ("Évek", SITE + "evek/"))],
+    ), encoding="utf-8")
+    urls.append((SITE + "evek/", "0.7"))
+
+    fin = [a for a in A.values() if a["res"]]
+    fastest = sorted(fin, key=lambda a: min(r["t"] for r in a["res"]))[:25]
+    most = sorted(fin, key=lambda a: (-len(a["res"]), a["name"]))[:25]
+    li = lambda arr, val: "".join(f'<li><span class="pos">{i + 1}.</span><a class="who" href="{a["path"]}">{esc(a["name"])}</a>'
+                                 f'<span class="val">{val(a)}</span></li>' for i, a in enumerate(arr))
+    out = ROOT / "rekordok" / "index.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page(
+        depth=1, title="Rekordok – eXtremeMan Nagyatád finisherek",
+        description="eXtremeMan Nagyatád toplisták: leggyorsabb egyéni idők, legtöbb célba érés, leghosszabb sorozat.",
+        canonical=SITE + "rekordok/", years_html=years_html,
+        content=f"""
+    <div class="page-head"><h1>Rekordok</h1></div>
+    <div class="grid-2">
+      <section class="card"><h2>Leggyorsabb egyéni idők</h2><ol class="rank-list">{li(fastest, lambda a: fmt(min(r["t"] for r in a["res"])))}</ol></section>
+      <section class="card"><h2>Legtöbb célba érés</h2><ol class="rank-list">{li(most, lambda a: f"{len(a['res'])}×")}</ol></section>
+    </div>""",
+        jsonld=[crumbs(("Finisherek", SITE), ("Rekordok", SITE + "rekordok/"))],
+    ), encoding="utf-8")
+    urls.append((SITE + "rekordok/", "0.7"))
+
+    # ---------------- 404.html: ismeretlen cím esetén is az app töltődik be ----------------
+    from urllib.parse import urlparse
+    nf = page(depth=0, title="eXtremeMan Nagyatád finisherek", description="Az oldal nem található.",
+              canonical=SITE, content='<div class="loading" role="status"><span class="spinner"></span> Betöltés…</div>',
+              years_html=years_html, jsonld=[])
+    nf = nf.replace('<base href="./">', f'<base href="{urlparse(SITE).path}">')
+    nf = nf.replace("<title>", '<meta name="robots" content="noindex">\n  <title>', 1)
+    (ROOT / "404.html").write_text(nf, encoding="utf-8")
 
     today = date.today().isoformat()
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']

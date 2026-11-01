@@ -163,6 +163,18 @@ def main() -> None:
         if lic:
             ident_lic[lic].add(aid)
 
+    lic_rejects = []
+
+    def lic_ok(aid, row):
+        """A licencszám néha hibás az EvoChipen (pl. két különböző ember ugyanazzal):
+        csak akkor fogadjuk el, ha a név is hasonlít, vagy egyezik a születési év."""
+        a = athletes[aid]
+        ok = name_sim(row["name"], a["source_name"]) > 0 or (row.get("birth_year") and a["birth_year"] == row["birth_year"])
+        if not ok:
+            lic_rejects.append(f"LICENC? „{row['name']}” ({row.get('birth_year')}) licence {row.get('license')} "
+                               f"= #{aid} {a['source_name']} ({a['birth_year']}) – elutasítva, a név és a szül. év sem egyezik")
+        return ok
+
     def absorb(a, row):
         if a["birth_year"] is None and row.get("birth_year"):
             a["birth_year"] = row["birth_year"]
@@ -309,7 +321,7 @@ def main() -> None:
         for pos, row in enumerate(rows, start=1):
             by, aid, how = row["birth_year"], None, ""
             lic = norm_lic(row.get("license"))
-            ids = (ident_lic.get(lic, set()) if lic else set()) - taken
+            ids = {i for i in (ident_lic.get(lic, set()) if lic else set()) - taken if lic_ok(i, row)}
             if len(ids) == 1:
                 aid, how = next(iter(ids)), "licenc"
             else:
@@ -391,7 +403,7 @@ def main() -> None:
                 v = ov[row["name"]]
                 assign[i] = (None if v == "new" else athletes[int(v)], "kézi")
             else:
-                ids = ident_lic.get(norm_lic(row.get("license")), set()) - taken
+                ids = {i for i in ident_lic.get(norm_lic(row.get("license")), set()) - taken if lic_ok(i, row)}
                 if len(ids) == 1:
                     assign[i] = (athletes[next(iter(ids))], "licenc")
             if i in assign and assign[i][0]:
@@ -441,7 +453,8 @@ def main() -> None:
     used = core_ids | {r["athlete_id"] for r in race_results}
     athletes = {k: v for k, v in athletes.items() if k in used}
 
-    order = {"KÉTES": 0, "MEGJ.": 1, "ÖSSZ": 2, "OK  ": 3, "DÚSÍ": 4}
+    report.extend(lic_rejects)
+    order = {"KÉTES": 0, "LICE": 1, "MEGJ.": 2, "ÖSSZ": 3, "OK  ": 4, "DÚSÍ": 5}
     report.sort(key=lambda l: (order.get(l[:5].strip()[:4], 9), l))
     (DATA / "match_report.txt").write_text("\n".join(report) + "\n", encoding="utf-8")
 

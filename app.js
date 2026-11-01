@@ -1,11 +1,13 @@
 /* eXtremeMan Nagyatád – finisherek
  * Statikus egyoldalas alkalmazás: adat Supabase-ből (vagy a beépített
  * data/finishers.json pillanatképből), nézetek hash alapú útválasztással:
- *   #/                 versenyzőlista (ABC, keresés, rendezés)
- *   #/versenyzo/<id>   versenyző adatlap trendgrafikonnal
- *   #/evek             évek áttekintése
- *   #/ev/<év>          egy év eredménylistája
- *   #/rekordok         toplisták
+ *   ./                          versenyzőlista (ABC, keresés, rendezés)
+ *   versenyzo/<id>-<név>/       versenyző adatlap (?ev=<év>: a Körönként kártya éve)
+ *   evek/  ev/<év>/             évek áttekintése, egy év eredménylistája
+ *   rekordok/                   toplisták
+ *   versenyek/  verseny/<kulcs>/ további eXtremeMan versenyek
+ * Rendes (History API) címek; minden címhez van statikus oldal is (build_pages.py),
+ * a régi hash-linkeket (#/...) az app átírja.
  */
 (() => {
   'use strict';
@@ -19,7 +21,7 @@
   function setHero({ img, pos = 'center 30%', eyebrow, title, lead, stats = [], compact = false }) {
     $hero.innerHTML = `
       <section class="hero${compact ? ' compact' : ''}">
-        <div class="hero-bg" style="background-image:url(images/${img});background-position:${pos}"></div>
+        <div class="hero-bg" style="background-image:url(${ROOT_PATH}images/${img});background-position:${pos}"></div>
         <div class="hero-in">
           <div class="hero-eyebrow">${eyebrow}</div>
           <h1 class="hero-title">${title}</h1>
@@ -51,6 +53,20 @@
   const nf = new Intl.NumberFormat('hu-HU');
   const coll = new Intl.Collator('hu', { sensitivity: 'base' });
   const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+  // Az oldal gyökere (pl. /ExtremeManFinishers/) – az app.js helyéből
+  const ROOT_PATH = new URL('.', document.currentScript.src).pathname;
+  // ugyanaz, mint a build_pages.py slug()-ja
+  const slugify = (x) => fold(String(x || '').normalize('NFKD')).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'versenyzo';
+  const U = {
+    home: () => ROOT_PATH,
+    years: () => `${ROOT_PATH}evek/`,
+    records: () => `${ROOT_PATH}rekordok/`,
+    races: () => `${ROOT_PATH}versenyek/`,
+    year: (y) => `${ROOT_PATH}ev/${y}/`,
+    race: (k) => `${ROOT_PATH}verseny/${k}/`,
+    athlete: (id, name, year) => `${ROOT_PATH}versenyzo/${id}-${slugify(name)}/${year ? `?ev=${year}` : ''}`,
+  };
   const median = (arr) => {
     if (!arr.length) return null;
     const a = [...arr].sort((x, y) => x - y), m = a.length >> 1;
@@ -87,11 +103,11 @@
         return { d, source: 'supabase' };
       } catch (e) {
         console.warn('A Supabase nem elérhető, a beépített pillanatkép töltődik be.', e);
-        const res = await fetch('data/finishers.json');
+        const res = await fetch(`${ROOT_PATH}data/finishers.json`);
         return { d: await res.json(), source: 'fallback' };
       }
     }
-    const res = await fetch('data/finishers.json');
+    const res = await fetch(`${ROOT_PATH}data/finishers.json`);
     return { d: await res.json(), source: 'snapshot' };
   }
 
@@ -273,8 +289,16 @@
       // sorozatok
       for (const s of opts.series) {
         if (s.points.length > 1) {
-          const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
-          svg.append(svgEl('path', { class: 'line', d, style: `stroke:${s.color}` }));
+          const P = (p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`;
+          let solid = '', gap = '';
+          s.points.forEach((p, i) => {
+            if (!i) { solid += `M${P(p)}`; return; }
+            const prev = s.points[i - 1];
+            if (s.gaps && p.x - prev.x > 1) { gap += `M${P(prev)}L${P(p)}`; solid += `M${P(p)}`; }
+            else solid += `L${P(p)}`;
+          });
+          if (gap) svg.append(svgEl('path', { class: 'line gap', d: gap, style: `stroke:${s.color}` }));
+          svg.append(svgEl('path', { class: 'line', d: solid, style: `stroke:${s.color}` }));
         }
         if (s.dots !== false) {
           for (const p of s.points) {
@@ -470,7 +494,7 @@
         [nf.format(M.results), 'célba érés'],
         [years.length, 'verseny'],
         [nf.format(years[years.length - 1].n), `célba érkező, ${lastY}`],
-        [fmt(rec.t), `pályacsúcs · <a href="#/versenyzo/${rec.a.id}">${esc(rec.a.name)}</a>, ${rec.year}`],
+        [fmt(rec.t), `pályacsúcs · <a href="${U.athlete(rec.a.id, rec.a.name)}">${esc(rec.a.name)}</a>, ${rec.year}`],
       ],
     });
     $app.innerHTML = `
@@ -502,7 +526,7 @@
     let filtered = [], shown = 0;
 
     const rowHtml = (a) => `
-      <a class="row" href="#/versenyzo/${a.id}">
+      <a class="row" href="${U.athlete(a.id, a.name)}">
         <div><div class="name">${esc(a.name)}</div>
           <div class="meta">${a.by ? `${a.by} · ` : ''}${a.first === a.last ? a.first : `${a.first}–${a.last}`}</div></div>
         ${sparkline(a)}
@@ -564,7 +588,7 @@
 
     $app.innerHTML = `
       <div class="page-head">
-        <div class="eyebrow"><a href="#/">← Finisherek</a></div>
+        <div class="eyebrow"><a href="${U.home()}">← Finisherek</a></div>
         <h1>${esc(a.name)}</h1>
         <p class="lead">${[a.by ? `Született ${a.by}` : '', a.club ? esc(a.club) : '',
           `${a.count}× célba ért ${a.first === a.last ? a.first : `${a.first} és ${a.last} között`}`].filter(Boolean).join(' · ')}</p>
@@ -620,7 +644,7 @@
           <thead><tr><th>Év</th><th class="r">Célidő</th><th class="r">Helyezés</th><th class="r">Mezőny</th><th class="r">A legjobbhoz</th><th class="r">A mediánhoz</th></tr></thead>
           <tbody>${a.res.slice().reverse().map((r) => `
             <tr class="${r === a.bestRes && a.count > 1 ? 'pb' : ''}">
-              <td><a href="#/ev/${r.year}">${r.year}</a>${r === a.bestRes && a.count > 1 ? '<span class="pb-tag">legjobb</span>' : ''}</td>
+              <td><a href="${U.year(r.year)}">${r.year}</a>${r === a.bestRes && a.count > 1 ? '<span class="pb-tag">legjobb</span>' : ''}</td>
               <td class="r">${fmt(r.t)}</td>
               <td class="r">${r.pos}. <span class="muted">/ ${r.y.n}</span></td>
               <td class="r">${pctLabel(pct(r))}</td>
@@ -646,12 +670,15 @@
         const ref = M.years.filter((y) => y.year >= x0 && y.year <= x1).map((y) => ({ x: y.year, y: y.median }));
         series.push({ name: 'Mezőny mediánja', color: 'var(--ref)', points: ref, dots: false, endLabel: 'medián' });
       }
-      series.push({ name: a.name, color: 'var(--s1)', points: pts });
+      series.push({ name: a.name, color: 'var(--s1)', points: pts, gaps: true });
+      const hasGaps = a.res.some((r, i) => i && r.year - a.res[i - 1].year > 1);
+      const gapKey = hasGaps ? [{ name: 'kimaradt év(ek)', color: 'var(--s1)', dash: true }] : [];
       document.getElementById('trendNote').textContent = mode === 'time'
         ? 'Feljebb = gyorsabb. A szürke vonal az adott év összes célba érkezőjének medián ideje.'
         : 'Hányadik százalékban ért célba a mezőnyön belül (feljebb = előrébb). Kiszűri az időjárás és a pálya évenkénti hatását.';
       document.getElementById('trendLegend').innerHTML = mode === 'time'
-        ? legendInner([{ name: a.name, color: 'var(--s1)' }, { name: 'Mezőny mediánja', color: 'var(--ref)' }]) : '';
+        ? legendInner([{ name: a.name, color: 'var(--s1)' }, ...gapKey, { name: 'Mezőny mediánja', color: 'var(--ref)' }])
+        : legendInner(gapKey);
       const b = a.bestRes;
       const bestP = a.res.reduce((x, r) => (pct(r) < pct(x) ? r : x));
       lineChart(el, {
@@ -672,7 +699,7 @@
             ${ttRow('Mezőny mediánja', fmt(r.y.median), 'var(--ref)')}
             ${a.count > 1 ? ttRow('A legjobbhoz', r === a.bestRes ? 'legjobb' : fmtDiff(r.t - a.best)) : ''}`;
         },
-        onClick: (x) => { if (a.res.some((q) => q.year === x)) location.hash = `#/ev/${x}`; },
+        onClick: (x) => { if (a.res.some((q) => q.year === x)) go(U.year(x)); },
       });
     };
     if (splitYears.length) {
@@ -700,6 +727,13 @@
     if (splitYears.length > 1) {
       const S3 = DISC.slice(0, 3);
       const discRank = (r, k) => lowerBound(r.y.split[k].sorted, r[k]) + 1;
+      // a vízszintes tengely a teljes nagyatádi pályafutás; ahol nincs részidő, halvány sáv jelzi
+      const splitFrom = M.years.find((y) => y.hasSplits).year;
+      const xDom = [Math.min(a.first, splitYears[0].year), Math.max(a.last, splitYears[splitYears.length - 1].year)];
+      const noData = a.first < splitFrom
+        ? [{ x0: xDom[0] - 0.5, x1: splitFrom - 0.5, label: `nincs részidő-adat (${splitFrom} előtt)`, fill: 'var(--surface-2)' }] : [];
+      const raceGaps = splitYears.some((r, i) => i && r.year - splitYears[i - 1].year > 1)
+        || a.res.some((r) => r.year >= splitFrom && r.swim == null);
       const discPct = (r, k) => (discRank(r, k) / r.y.split[k].sorted.length) * 100;
       const drawSplits = (mode) => {
         const host = document.getElementById('splitTrend');
@@ -708,17 +742,19 @@
         if (mode === 'time') {
           document.getElementById('splitNote').textContent =
             'Szakaszidők évenként (feljebb = gyorsabb); a szürke vonal az adott év mezőnyének medián szakaszideje.';
-          document.getElementById('splitLegend').innerHTML = legendInner([{ name: 'Mezőny mediánja', color: 'var(--ref)' }]);
+          document.getElementById('splitLegend').innerHTML = legendInner([{ name: 'Mezőny mediánja', color: 'var(--ref)' },
+            ...(raceGaps ? [{ name: 'kimaradt év(ek)', color: 'var(--ink-2)', dash: true }] : []),
+            ...(noData.length ? [{ name: `${splitFrom} előtt nincs részidő-adat`, color: 'var(--surface-2)', dot: true }] : [])]);
           host.innerHTML = `<div class="split-multiples">${S3.map((d) =>
             `<div><h3><i class="key-dot" style="background:${d.color}"></i>${d.label}</h3><div class="chart" id="st-${d.k}"></div></div>`).join('')}</div>`;
           for (const d of S3) {
             const rs = splitYears.filter((r) => r[d.k] != null);
             const best = rs.reduce((b, r) => (r[d.k] < b[d.k] ? r : b), rs[0]);
             lineChart(document.getElementById(`st-${d.k}`), {
-              kind: 'time', invert: true, height: 210,
+              kind: 'time', invert: true, height: 210, xDomain: xDom, bands: noData,
               series: [
                 { name: 'Mezőny mediánja', color: 'var(--ref)', dots: false, points: rs.map((r) => ({ x: r.year, y: r.y.split[d.k].median })) },
-                { name: d.label, color: d.color, points: rs.map((r) => ({ x: r.year, y: r[d.k] })) },
+                { name: d.label, color: d.color, points: rs.map((r) => ({ x: r.year, y: r[d.k] })), gaps: true },
               ],
               primary: 1,
               ariaLabel: `${a.name}: ${d.label.toLowerCase()} ideje évenként`,
@@ -732,18 +768,20 @@
                   ${ttRow('Mezőny mediánja', fmt(sp.median), 'var(--ref)')}
                   ${r === best ? '' : ttRow('A legjobbhoz', fmtDiff(r[d.k] - best[d.k]))}`;
               },
-              onClick: (x) => { location.hash = `#/ev/${x}`; },
+              onClick: (x) => { go(U.year(x)); },
             });
           }
         } else {
           document.getElementById('splitNote').textContent =
             'Hányadik százalékban végzett az egyes szakaszokon az adott év mezőnyében (feljebb = előrébb).';
-          document.getElementById('splitLegend').innerHTML = legendInner(S3.map((d) => ({ name: d.label, color: d.color })));
+          document.getElementById('splitLegend').innerHTML = legendInner([...S3.map((d) => ({ name: d.label, color: d.color })),
+            ...(raceGaps ? [{ name: 'kimaradt év(ek)', color: 'var(--ink-2)', dash: true }] : []),
+            ...(noData.length ? [{ name: `${splitFrom} előtt nincs részidő-adat`, color: 'var(--surface-2)', dot: true }] : [])]);
           host.innerHTML = '<div class="chart" id="st-pct"></div>';
           lineChart(document.getElementById('st-pct'), {
-            kind: 'pct', invert: true, yDomain: [0, 100],
+            kind: 'pct', invert: true, yDomain: [0, 100], xDomain: xDom, bands: noData,
             series: S3.map((d) => ({
-              name: d.label, color: d.color, endLabel: d.label.toLowerCase(),
+              name: d.label, color: d.color, endLabel: d.label.toLowerCase(), gaps: true,
               points: splitYears.filter((r) => r[d.k] != null).map((r) => ({ x: r.year, y: discPct(r, d.k) })),
             })),
             ariaLabel: `${a.name}: helyezés szakaszonként a mezőnyben, évenként`,
@@ -753,7 +791,7 @@
               return `<div class="tt-title">${x}</div>` + S3.map((d) =>
                 ttRow(d.label, `${fmt(r[d.k])} · ${discRank(r, d.k)}. / ${r.y.split[d.k].sorted.length}`, d.color)).join('');
             },
-            onClick: (x) => { location.hash = `#/ev/${x}`; },
+            onClick: (x) => { go(U.year(x)); },
           });
         }
       };
@@ -775,7 +813,9 @@
   }
 
   function legendInner(items) {
-    return items.map((i) => `<span><i class="${i.dot ? 'key-dot' : 'key-line'}" style="background:${i.color}"></i>${esc(i.name)}</span>`).join('');
+    return items.map((i) => (i.dash
+      ? `<span><i class="key-dash" style="color:${i.color}"></i>${esc(i.name)}</span>`
+      : `<span><i class="${i.dot ? 'key-dot' : 'key-line'}" style="background:${i.color}"></i>${esc(i.name)}</span>`)).join('');
   }
   const legendHtml = (items) => `<div class="legend">${legendInner(items)}</div>`;
 
@@ -797,7 +837,7 @@
         }
       } catch (e) { /* tartalék fájl */ }
     }
-    const r = await fetch(`data/splits/${year}.json`);
+    const r = await fetch(`${ROOT_PATH}data/splits/${year}.json`);
     return r.ok ? r.json() : null;
   }
   /** Betöltés + átalakítás: [[összidő, helyezés], ...] -> [[összidő, köridő, helyezés], ...] */
@@ -944,7 +984,7 @@
     const panel = document.getElementById('passPanel');
     const nameLink = (x) => {
       const o = M.A.get(x.aid);
-      return o ? `<a href="#/versenyzo/${o.id}/${year}">${esc(o.name)}</a>` : '';
+      return o ? `<a href="${U.athlete(o.id, o.name, year)}">${esc(o.name)}</a>` : '';
     };
     const showPasses = (k) => {
       const ps = passes[k];
@@ -1013,7 +1053,7 @@
       <thead><tr><th>Év</th><th class="c-bar">Arányok</th>${DISC.map((d) =>
         `<th class="r"><i class="key-dot" style="background:${d.color};margin-right:6px"></i>${d.label}</th>`).join('')}<th class="r">Célidő</th></tr></thead>
       <tbody>${rows.slice().reverse().map((r) => `<tr>
-        <td><a href="#/ev/${r.year}">${r.year}</a></td>
+        <td><a href="${U.year(r.year)}">${r.year}</a></td>
         <td class="c-bar">${bar(r)}</td>
         ${DISC.map((d) => cell(r, d)).join('')}
         <td class="r split-cell${multi && r.t === bestT ? ' best' : ''}"><b>${fmt(r.t)}</b><small>${r.pos}. / ${r.y.n}</small></td>
@@ -1062,8 +1102,8 @@
         <div class="table-wrap"><table>
           <thead><tr><th>Év</th><th class="r">Célba érkezők</th><th class="r">Új finisherek</th><th>Győztes</th><th class="r">Győztes idő</th><th class="r">Medián</th></tr></thead>
           <tbody>${ys.slice().reverse().map((y) => `<tr>
-            <td><a href="#/ev/${y.year}">${y.year}</a></td><td class="r">${y.n}</td><td class="r">${y.rookies}</td>
-            <td><a href="#/versenyzo/${y.winner.a.id}">${esc(y.winner.a.name)}</a></td>
+            <td><a href="${U.year(y.year)}">${y.year}</a></td><td class="r">${y.n}</td><td class="r">${y.rookies}</td>
+            <td><a href="${U.athlete(y.winner.a.id, y.winner.a.name)}">${esc(y.winner.a.name)}</a></td>
             <td class="r">${fmt(y.winner.t)}</td><td class="r">${fmt(y.median)}</td></tr>`).join('')}</tbody>
         </table></div>
       </section>`;
@@ -1073,7 +1113,7 @@
       value: y.n,
       valueLabel: y === maxY || y === last ? String(y.n) : '',
       tip: `<div class="tt-title">${y.year}</div>${ttRow('Célba érkezők', y.n)}${ttRow('Új finisherek', y.rookies)}${ttRow('Győztes idő', fmt(y.winner.t))}`,
-      onClick: () => { location.hash = `#/ev/${y.year}`; },
+      onClick: () => { go(U.year(y.year)); },
     })), { ariaLabel: 'Célba érkezők száma évenként', labelEvery: 5 });
     lineChart(document.getElementById('tm'), {
       kind: 'time', invert: true,
@@ -1086,7 +1126,7 @@
         const y = M.Y.get(x);
         return `<div class="tt-title">${x}</div>${ttRow('Győztes', fmt(y.winner.t), 'var(--s1)')}${ttRow('Medián', fmt(y.median), 'var(--s2)')}${ttRow('Célba érkezők', y.n)}`;
       },
-      onClick: (x) => { location.hash = `#/ev/${x}`; },
+      onClick: (x) => { go(U.year(x)); },
     });
   }
 
@@ -1101,20 +1141,20 @@
     const sp = y.hasSplits;
     $app.innerHTML = `
       <div class="page-head">
-        <div class="eyebrow"><a href="#/evek">← Évek</a></div>
+        <div class="eyebrow"><a href="${U.years()}">← Évek</a></div>
         <div class="card-head" style="margin:0">
           <h1>${year}</h1>
           <div class="pager">
-            <a href="${prev ? `#/ev/${prev.year}` : '#'}" aria-disabled="${!prev}" aria-label="Előző év">← ${prev ? prev.year : ''}</a>
-            <a href="${next ? `#/ev/${next.year}` : '#'}" aria-disabled="${!next}" aria-label="Következő év">${next ? next.year : ''} →</a>
+            <a href="${prev ? `${U.year(prev.year)}` : '#'}" aria-disabled="${!prev}" aria-label="Előző év">← ${prev ? prev.year : ''}</a>
+            <a href="${next ? `${U.year(next.year)}` : '#'}" aria-disabled="${!next}" aria-label="Következő év">${next ? next.year : ''} →</a>
           </div>
         </div>
       </div>
       <div class="tiles">
         ${tile('Célba érkezők', y.n, `ebből ${y.rookies} új finisher`)}
-        ${tile('Győztes idő', fmt(y.winner.t), `<a href="#/versenyzo/${y.winner.a.id}">${esc(y.winner.a.name)}</a>`)}
+        ${tile('Győztes idő', fmt(y.winner.t), `<a href="${U.athlete(y.winner.a.id, y.winner.a.name)}">${esc(y.winner.a.name)}</a>`)}
         ${tile('Medián idő', fmt(y.median), 'a mezőny fele ennél gyorsabb')}
-        ${tile('Utolsó célba érkező', fmt(y.last.t), `<a href="#/versenyzo/${y.last.a.id}">${esc(y.last.a.name)}</a>`)}
+        ${tile('Utolsó célba érkező', fmt(y.last.t), `<a href="${U.athlete(y.last.a.id, y.last.a.name)}">${esc(y.last.a.name)}</a>`)}
       </div>
       <section class="card">
         <div class="card-head"><div><h2>Célidők eloszlása</h2><p>Hányan értek célba az egyes félórás sávokban.</p></div></div>
@@ -1125,7 +1165,7 @@
         <div class="grid-2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">${DISC.slice(0, 3).map((d) => {
           const top = y.res.filter((r) => r[d.k] != null).sort((p, q) => p[d.k] - q[d.k]).slice(0, 5);
           return `<div><h3 style="font-size:15px;margin-bottom:4px"><i class="key-dot" style="background:${d.color};margin-right:8px"></i>${d.label}</h3>
-            <ol class="rank-list">${top.map((r, i) => `<li><span class="pos">${i + 1}.</span><a class="who" href="#/versenyzo/${r.a.id}">${esc(r.a.name)}</a><span class="val">${fmt(r[d.k])}</span></li>`).join('')}</ol></div>`;
+            <ol class="rank-list">${top.map((r, i) => `<li><span class="pos">${i + 1}.</span><a class="who" href="${U.athlete(r.a.id, r.a.name)}">${esc(r.a.name)}</a><span class="val">${fmt(r[d.k])}</span></li>`).join('')}</ol></div>`;
         }).join('')}</div>
       </section>` : ''}
       <section class="card">
@@ -1152,7 +1192,7 @@
     let limit = 100;
     const rowHtml = (r) => `<tr>
       <td class="r">${r.pos}.</td>
-      <td><a href="#/versenyzo/${r.a.id}">${esc(r.a.name)}</a></td>
+      <td><a href="${U.athlete(r.a.id, r.a.name)}">${esc(r.a.name)}</a></td>
       ${sp ? `<td class="muted">${esc(r.club || '')}</td><td class="r">${fmt(r.swim)}</td><td class="r">${fmt(r.bike)}</td><td class="r">${fmt(r.run)}</td>` : ''}
       <td class="r"><b>${fmt(r.t)}</b></td>
       <td class="r">${r.nth === 1 ? '<span class="pb-tag" style="margin:0">első</span>' : `${r.nth}.`}</td></tr>`;
@@ -1176,7 +1216,7 @@
     const streak = [...M.athletes].sort((a, b) => b.streak - a.streak || a.streakEnd - b.streakEnd).slice(0, 25);
     const longest = [...M.athletes].filter((a) => a.count > 1).sort((a, b) => (b.last - b.first) - (a.last - a.first)).slice(0, 25);
     const list = (arr, val, sub) => `<ol class="rank-list">${arr.map((a, i) => `<li><span class="pos">${i + 1}.</span>
-      <span class="who"><a href="#/versenyzo/${a.id}">${esc(a.name)}</a><small>${sub(a)}</small></span><span class="val">${val(a)}</span></li>`).join('')}</ol>`;
+      <span class="who"><a href="${U.athlete(a.id, a.name)}">${esc(a.name)}</a><small>${sub(a)}</small></span><span class="val">${val(a)}</span></li>`).join('')}</ol>`;
     setHero({
       img: 'hero-erem.jpg', pos: 'center 25%', compact: true,
       eyebrow: 'Toplisták', title: 'Rekordok',
@@ -1217,7 +1257,7 @@
             if (res.ok) d = await res.json();
           } catch (e) { /* tartalék fájl */ }
         }
-        if (!d || !d.races || !d.races.length) d = await (await fetch('data/other.json')).json();
+        if (!d || !d.races || !d.races.length) d = await (await fetch(`${ROOT_PATH}data/other.json`)).json();
         return buildOther(d);
       })().catch((e) => { console.error(e); otherPromise = null; return null; });
     }
@@ -1266,7 +1306,7 @@
           <thead><tr><th>Év</th><th>Táv</th><th class="r">Célidő</th><th class="r">Helyezés</th><th>Részidők</th></tr></thead>
           <tbody>${g.map((r) => `<tr>
             <td>${r.race.year}</td>
-            <td><a href="#/verseny/${r.race.key}">${esc(r.race.name)}</a></td>
+            <td><a href="${U.race(r.race.key)}">${esc(r.race.name)}</a></td>
             <td class="r"><b>${fmt(r.t)}</b></td>
             <td class="r">${r.pos}. <span class="muted">/ ${r.race.n}</span></td>
             <td class="segs">${r.race.segLabels.map((l, i) => (r.segs[i] != null ? `<span>${esc(l)} <b>${fmt(r.segs[i])}</b></span>` : '')).join('')}</td>
@@ -1313,13 +1353,14 @@
     const rs = (O && O.byAthlete.get(id)) || [];
     if (!p || !rs.length) return renderNotFound('Nincs ilyen versenyző.');
     document.title = `${p.name} – eXtremeMan eredmények`;
+    canonicalize(U.athlete(p.id, p.name));
     const ys = rs.map((r) => r.race.year), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const club = [...rs].sort((x, y) => y.race.year - x.race.year).find((r) => r.club)?.club;
     const best = rs.reduce((b, r) => (r.pos / r.race.n < b.pos / b.race.n ? r : b));
     const nSeries = new Set(rs.map((r) => r.race.series)).size;
     $app.innerHTML = `
       <div class="page-head">
-        <div class="eyebrow"><a href="#/versenyek">← Versenyek</a></div>
+        <div class="eyebrow"><a href="${U.races()}">← Versenyek</a></div>
         <h1>${esc(p.name)}</h1>
         <p class="lead">${[p.by ? `Született ${p.by}` : '', club ? esc(club) : '',
           `${rs.length} eXtremeMan verseny ${y0 === y1 ? y0 : `${y0} és ${y1} között`}`].filter(Boolean).join(' · ')}</p>
@@ -1348,16 +1389,16 @@
     const sameYear = sib.filter((x) => x.year === r.year);
     const sameName = sib.filter((x) => x.name === r.name).sort((x, y) => y.year - x.year);
     const w = r.res[0], wp = w && personOf(O, w.aid);
-    const chip = (x, label) => `<a class="chip${x === r ? ' active' : ''}" href="#/verseny/${x.key}">${esc(label)} <span class="muted">${x.n}</span></a>`;
+    const chip = (x, label) => `<a class="chip${x === r ? ' active' : ''}" href="${U.race(x.key)}">${esc(label)} <span class="muted">${x.n}</span></a>`;
     $app.innerHTML = `
       <div class="page-head">
-        <div class="eyebrow"><a href="#/versenyek">← Versenyek</a></div>
+        <div class="eyebrow"><a href="${U.races()}">← Versenyek</a></div>
         <h1>${esc(r.seriesName)} ${r.year}</h1>
         <p class="lead">${esc(r.name)}</p>
       </div>
       <div class="tiles">
         ${tile('Célba érkezők', r.n, '')}
-        ${tile('Győztes idő', fmt(r.best), wp ? `<a href="#/versenyzo/${wp.id}">${esc(wp.name)}</a>` : '')}
+        ${tile('Győztes idő', fmt(r.best), wp ? `<a href="${U.athlete(wp.id, wp.name)}">${esc(wp.name)}</a>` : '')}
         ${tile('Medián idő', fmt(r.median), 'a mezőny fele ennél gyorsabb')}
         ${tile('Szakaszok', r.segLabels.filter((l) => !/^dep/i.test(l)).length || '–', esc(r.segLabels.filter((l) => !/^dep/i.test(l)).join(' · ')))}
       </div>
@@ -1378,7 +1419,7 @@
     const $tb = document.getElementById('rtb'), $more = document.getElementById('rmore');
     const row = (x) => {
       const p = personOf(O, x.aid);
-      return `<tr><td class="r">${x.pos}.</td><td>${p ? `<a href="#/versenyzo/${p.id}">${esc(p.name)}</a>` : '?'}</td>
+      return `<tr><td class="r">${x.pos}.</td><td>${p ? `<a href="${U.athlete(p.id, p.name)}">${esc(p.name)}</a>` : '?'}</td>
         <td class="muted">${esc(x.club || '')}</td>${r.segLabels.map((l, i) => `<td class="r">${fmt(x.segs[i])}</td>`).join('')}
         <td class="r"><b>${fmt(x.t)}</b></td></tr>`;
     };
@@ -1410,35 +1451,73 @@
     const list = [...O.series.values()].sort((x, y) => y.races.length - x.races.length);
     $app.innerHTML = `
       <section class="card"><div class="card-head"><div><h2>Nagyatád – teljes táv</h2>
-        <p>Az eXtremeMan fő versenye 1990 óta: lásd a <a href="#/">finisherek névsorát</a> és az <a href="#/evek">évenkénti eredményeket</a>.</p></div></div></section>
+        <p>Az eXtremeMan fő versenye 1990 óta: lásd a <a href="${U.home()}">finisherek névsorát</a> és az <a href="${U.years()}">évenkénti eredményeket</a>.</p></div></div></section>
       <div class="grid-2">${list.map((sr) => {
         const years = [...new Set(sr.races.map((x) => x.year))].sort((a, b) => b - a);
         return `<section class="card"><div class="card-head"><div><h2>${esc(sr.name)}</h2>
           <p>${sr.races.length} verseny · ${sr.races.reduce((t, x) => t + x.n, 0)} célba érkezés</p></div></div>
           ${years.map((y) => `<div class="race-year"><b>${y}</b><div class="chips">${sr.races.filter((x) => x.year === y)
-            .map((x) => `<a class="chip" href="#/verseny/${x.key}">${esc(x.name)} <span class="muted">${x.n}</span></a>`).join('')}</div></div>`).join('')}
+            .map((x) => `<a class="chip" href="${U.race(x.key)}">${esc(x.name)} <span class="muted">${x.n}</span></a>`).join('')}</div></div>`).join('')}
         </section>`;
       }).join('')}</div>`;
   }
 
   function renderNotFound(msg) {
-    $app.innerHTML = `<div class="notice"><p>${esc(msg)}</p><p><a href="#/">Vissza a finisherekhez</a></p></div>`;
+    $app.innerHTML = `<div class="notice"><p>${esc(msg)}</p><p><a href="${U.home()}">Vissza a finisherekhez</a></p></div>`;
   }
 
   // ------------------------------------------------------------------
   // Útválasztás
   // ------------------------------------------------------------------
-  /** Az aktuális nézet: a #/... útvonalból, vagy ha nincs, a statikus oldal
-   *  címéből (versenyzo/<id>-<név>/, ev/<év>/ – ezeket a build_pages.py generálja). */
+  /** Az aktuális nézet a címből (ROOT_PATH-hoz képest):
+   *  ['' | 'evek' | 'rekordok' | 'versenyek' | 'versenyzo', id, év | 'ev', év | 'verseny', kulcs] */
   function currentRoute() {
-    const h = location.hash.replace(/^#\/?/, '');
-    if (h) return h.split('/');
-    const m = location.pathname.match(/\/(versenyzo|ev)\/(\d+)(?:-[^/]*)?\/?(?:index\.html)?$/);
-    if (m) return [m[1], m[2]];
-    const v = location.pathname.match(/\/verseny\/(20\d\d-[a-z0-9-]+)\/?(?:index\.html)?$/);
-    if (v) return ['verseny', v[1]];
-    if (/\/versenyek\/?(?:index\.html)?$/.test(location.pathname)) return ['versenyek'];
+    let rel = location.pathname.startsWith(ROOT_PATH) ? location.pathname.slice(ROOT_PATH.length) : '';
+    rel = decodeURIComponent(rel).replace(/index\.html$/, '').replace(/^\/+|\/+$/g, '');
+    const parts = rel ? rel.split('/') : [''];
+    const q = new URLSearchParams(location.search);
+    if (parts[0] === 'versenyzo') return ['versenyzo', String(parseInt(parts[1], 10)), q.get('ev') || ''];
+    if (parts[0] === 'ev' || parts[0] === 'verseny') return [parts[0], parts[1] || ''];
+    if (['evek', 'rekordok', 'versenyek'].includes(parts[0])) return [parts[0]];
     return [''];
+  }
+
+  /** Navigáció újratöltés nélkül (History API). */
+  function go(url, replace = false) {
+    history[replace ? 'replaceState' : 'pushState'](null, '', url);
+    route();
+  }
+  /** A versenyző címe mindig a pontos név-slugot mutassa (megosztáshoz, SEO). */
+  function canonicalize(url) {
+    const now = location.pathname + location.search;
+    if (now !== url) history.replaceState(null, '', url);
+  }
+  // belső linkek: újratöltés nélküli navigáció
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || !url.pathname.startsWith(ROOT_PATH)) return;
+    if (/\.[a-z0-9]+$/i.test(url.pathname) && !/index\.html$/.test(url.pathname)) return; // fájlok (json, xml, kép)
+    e.preventDefault();
+    go(url.pathname + url.search);
+  });
+  window.addEventListener('popstate', route);
+
+  /** Régi #/... linkek átírása az új címekre. */
+  function upgradeHash() {
+    const h = location.hash.replace(/^#\/?/, '');
+    if (!location.hash.startsWith('#/')) return;
+    const [v, x, y] = h.split('/');
+    let url = U.home();
+    if (v === 'versenyzo') { const a = M.A.get(Number(x)); url = U.athlete(x, a ? a.name : '', y); }
+    else if (v === 'ev') url = U.year(x);
+    else if (v === 'verseny') url = U.race(x);
+    else if (v === 'evek') url = U.years();
+    else if (v === 'rekordok') url = U.records();
+    else if (v === 'versenyek') url = U.races();
+    history.replaceState(null, '', url);
   }
 
   function route() {
@@ -1452,7 +1531,7 @@
     if (view === 'versenyzo') {
       renderAthlete(Number(arg), Number(arg2) || null);
       const a = M.A.get(Number(arg));
-      if (a) title = `${a.name} – eXtremeMan Nagyatád eredmények`;
+      if (a) { title = `${a.name} – eXtremeMan Nagyatád eredmények`; canonicalize(U.athlete(a.id, a.name, arg2)); }
       else title = document.title; // a renderSideAthlete állítja be
     } else if (view === 'ev') { renderYear(Number(arg)); title = `eXtremeMan Nagyatád ${arg} eredmények – teljes táv`; }
     else if (view === 'evek') { renderYears(); title = 'Évek – eXtremeMan Nagyatád finisherek'; }
@@ -1483,7 +1562,8 @@
       fallback: 'A Supabase adatbázis most nem érhető el – a beépített pillanatkép látszik.',
       snapshot: 'Adatok: beépített pillanatkép (data/finishers.json).',
     }[source];
-    window.addEventListener('hashchange', route);
+    upgradeHash();
+    window.addEventListener('hashchange', () => { upgradeHash(); route(); });
     route();
   }).catch((e) => {
     console.error(e);
