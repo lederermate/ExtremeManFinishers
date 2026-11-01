@@ -103,7 +103,12 @@ szkript elején (`EVENTS`):
 python3 scripts/evochip_races.py   # -> data/races/*.json
 ```
 
-Utána az SQL Editorban sorban: `schema.sql` (ha változott), `seed.sql`,
+**Automatikus frissítés:** ha a `supabase/` mappa változása felkerül a `main` ágra, a
+`.github/workflows/supabase-seed.yml` munkafolyamat magától lefuttatja az SQL fájlokat
+(a `SUPABASE_DB_URL` secretben megadott Session pooler címmel). Kézzel: Actions →
+„Supabase adatbázis frissítése” → Run workflow.
+
+Kézi futtatás esetén az SQL Editorban sorban: `schema.sql` (ha változott), `seed.sql`,
 `seed_laps.sql`, `seed_laps_2.sql`, `seed_laps_3.sql`, `seed_races.sql`
 (a teljes tartalmat cserélik), és a változásokat feltölteni a GitHubra.
 Ha a `schema.sql` változott, előbb azt (többször is futtatható).

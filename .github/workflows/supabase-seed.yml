@@ -1,0 +1,58 @@
+# A supabase/ mappa SQL fájljainak automatikus futtatása a Supabase adatbázison.
+#
+# Mikor fut?
+#   - ha a main ágra olyan változás kerül, ami a supabase/ mappát érinti
+#   - kézzel: GitHub -> Actions -> "Supabase adatbázis frissítése" -> Run workflow
+#
+# Beállítás (egyszer): Settings -> Secrets and variables -> Actions -> New repository secret
+#   Név:   SUPABASE_DB_URL
+#   Érték: a Supabase "Session pooler" kapcsolati címe (Connect gomb), a jelszóval együtt:
+#          postgresql://postgres.<projekt>:<jelszó>@aws-...pooler.supabase.com:5432/postgres
+name: Supabase adatbázis frissítése
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**']
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-seed
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ellenőrzés – be van állítva a SUPABASE_DB_URL?
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Hiányzik a SUPABASE_DB_URL secret (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      - name: SQL fájlok futtatása (séma, eredmények, köridők, további versenyek)
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          files="supabase/schema.sql supabase/seed.sql $(ls supabase/seed_laps*.sql | sort -V) supabase/seed_races.sql"
+          for f in $files; do
+            echo "::group::$f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+            echo "::endgroup::"
+          done
+
+      - name: Gyors ellenőrzés
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$DATABASE_URL" -At -c "select 'versenyzők: ' || count(*) from athletes" \
+                               -c "select 'nagyatádi eredmények: ' || count(*) from results" \
+                               -c "select 'köridők: ' || count(*) from result_laps" \
+                               -c "select 'további versenyek eredményei: ' || count(*) from race_results"
