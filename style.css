@@ -222,6 +222,8 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .tooltip .tt-key { display: inline-flex; align-items: center; gap: 6px; }
 
 /* részidő sáv */
+.split-multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 20px; }
+.split-multiples h3 { font-size: 14px; font-weight: 600; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
 .split-table td { vertical-align: middle; }
 .split-cell small { display: block; font-size: 11px; color: var(--muted); line-height: 1.2; }
 .split-cell.best { color: var(--accent-ink); font-weight: 600; }
