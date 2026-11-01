@@ -13,6 +13,22 @@
   const CFG = window.FINISHERS_CONFIG || {};
   const $app = document.getElementById('app');
   const $tt = document.getElementById('tooltip');
+  const $hero = document.getElementById('hero');
+
+  /** Teljes szélességű fejlécfotó (főoldal, évek, rekordok). Fotók: extrememan.hu */
+  function setHero({ img, pos = 'center 30%', eyebrow, title, lead, stats = [], compact = false }) {
+    $hero.innerHTML = `
+      <section class="hero${compact ? ' compact' : ''}">
+        <div class="hero-bg" style="background-image:url(images/${img});background-position:${pos}"></div>
+        <div class="hero-in">
+          <div class="hero-eyebrow">${eyebrow}</div>
+          <h1 class="hero-title">${title}</h1>
+          ${lead ? `<p class="hero-lead">${lead}</p>` : ''}
+          ${stats.length ? `<div class="hero-stats">${stats.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>` : ''}
+        </div>
+        <div class="hero-credit">Fotó: <a href="https://www.extrememan.hu/" target="_blank" rel="noopener">extrememan.hu</a></div>
+      </section>`;
+  }
   const SVGNS = 'http://www.w3.org/2000/svg';
 
   // ------------------------------------------------------------------
@@ -439,17 +455,19 @@
     const firstY = years[0].year, lastY = years[years.length - 1].year;
     const rec = years.reduce((b, y) => (y.winner.t < b.t ? y.winner : b), years[0].winner);
     const letters = [...new Set(athletes.map((a) => a.letter))].sort(coll.compare);
+    setHero({
+      img: 'hero-cel.jpg', pos: 'center 30%',
+      eyebrow: 'eXtremeMan Nagyatád · teljes táv', title: 'Finisherek',
+      lead: `3,8 km úszás · 180 km kerékpár · 42,2 km futás. Mindenki, aki ${firstY} óta célba ért Nagyatádon – kattints egy névre az eredményekért és a trendgrafikonokért.`,
+      stats: [
+        [nf.format(athletes.length), 'finisher'],
+        [nf.format(M.results), 'célba érés'],
+        [years.length, 'verseny'],
+        [nf.format(years[years.length - 1].n), `célba érkező, ${lastY}`],
+        [fmt(rec.t), `pályacsúcs · <a href="#/versenyzo/${rec.a.id}">${esc(rec.a.name)}</a>, ${rec.year}`],
+      ],
+    });
     $app.innerHTML = `
-      <div class="page-head">
-        <h1>Finisherek</h1>
-        <p class="lead">Mindenki, aki ${firstY} óta teljes távon célba ért Nagyatádon. Kattints egy névre az eredményekért és a személyes trendgrafikonért.</p>
-      </div>
-      <div class="tiles">
-        ${tile('Finisherek', nf.format(athletes.length), 'különböző versenyző')}
-        ${tile('Célba érések', nf.format(M.results), `${years.length} versenyen`)}
-        ${tile(`${lastY}. évi célba érkezők`, nf.format(years[years.length - 1].n), `ebből ${years[years.length - 1].rookies} új finisher`)}
-        ${tile('Pályacsúcs', fmt(rec.t), `<a href="#/versenyzo/${rec.a.id}">${esc(rec.a.name)}</a>, ${rec.year}`)}
-      </div>
       <div class="controls">
         <label class="search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 0 1 6.3 12.9l5.4 5.4-1.4 1.4-5.4-5.4A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/></svg>
@@ -548,7 +566,7 @@
       <div class="tiles">
         ${tile('Célba érések', `${a.count}×`, a.streak > 1 ? `leghosszabb sorozat: ${a.streak} év` : '')}
         ${tile('Legjobb idő', fmt(a.best), `${a.bestRes.year} · ${a.bestRes.pos}. hely`)}
-        ${tile('Legutóbbi', fmt(lastR.t), `${lastR.year}${a.count > 1 ? ` · ${fmtDiff(lastR.t - a.best)} a legjobbhoz` : ''}`)}
+        ${tile('Legutóbbi', fmt(lastR.t), `${lastR.year}${a.count > 1 ? (lastR === a.bestRes ? ' · egyéni csúcs' : ` · ${fmtDiff(lastR.t - a.best)} a legjobbhoz`) : ''}`)}
         ${tile('Legjobb helyezés', `${bestPos.pos}.`, `${bestPos.year} · ${bestPos.y.n} célba érkezőből (${pctLabel(pct(bestPos))})`)}
       </div>
       ${a.count > 1 ? `<section class="card">
@@ -966,11 +984,12 @@
   function renderYears() {
     const ys = M.years;
     const maxY = ys.reduce((b, y) => (y.n > b.n ? y : b));
+    setHero({
+      img: 'hero-uszas.jpg', pos: 'center 65%', compact: true,
+      eyebrow: `${ys[0].year} – ${ys[ys.length - 1].year}`, title: 'Évek',
+      lead: `${ys.length} verseny, összesen ${nf.format(M.results)} célba érés. Kattints egy évre a teljes eredménylistáért.`,
+    });
     $app.innerHTML = `
-      <div class="page-head">
-        <h1>Évek</h1>
-        <p class="lead">${ys[0].year} és ${ys[ys.length - 1].year} között ${ys.length} versenyen összesen ${nf.format(M.results)} célba érés. Kattints egy évre a teljes eredménylistáért.</p>
-      </div>
       <section class="card">
         <div class="card-head"><div><h2>Célba érkezők száma</h2><p>Teljes táv, egyéni.</p></div></div>
         <div class="chart" id="cnt"></div>
@@ -1099,8 +1118,12 @@
     const longest = [...M.athletes].filter((a) => a.count > 1).sort((a, b) => (b.last - b.first) - (a.last - a.first)).slice(0, 25);
     const list = (arr, val, sub) => `<ol class="rank-list">${arr.map((a, i) => `<li><span class="pos">${i + 1}.</span>
       <span class="who"><a href="#/versenyzo/${a.id}">${esc(a.name)}</a><small>${sub(a)}</small></span><span class="val">${val(a)}</span></li>`).join('')}</ol>`;
+    setHero({
+      img: 'hero-erem.jpg', pos: 'center 25%', compact: true,
+      eyebrow: 'Toplisták', title: 'Rekordok',
+      lead: 'A leggyorsabbak, a legkitartóbbak és a leghűségesebbek a teljes távú egyéni célba érkezők között.',
+    });
     $app.innerHTML = `
-      <div class="page-head"><h1>Rekordok</h1><p class="lead">Toplisták a teljes távú egyéni célba érkezők között.</p></div>
       <div class="grid-2">
         <section class="card"><div class="card-head"><div><h2>Leggyorsabb egyéni idők</h2><p>Versenyzőnként a legjobb idő.</p></div></div>
           ${list(fastest, (a) => fmt(a.best), (a) => a.bestRes.year)}</section>
@@ -1122,6 +1145,7 @@
   // ------------------------------------------------------------------
   function route() {
     resetView();
+    $hero.innerHTML = '';
     const [view, arg] = location.hash.replace(/^#\/?/, '').split('/');
     const navKey = { versenyzo: 'list', '': 'list', evek: 'years', ev: 'years', rekordok: 'records' }[view || ''] || 'list';
     document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navKey));

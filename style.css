@@ -8,21 +8,21 @@
 @font-face { font-family: Archivo; font-weight: 800; font-display: swap; src: url(fonts/archivo-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: Archivo; font-weight: 800; font-display: swap; src: url(fonts/archivo-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
-/* ---------- Színek (világos / sötét) ---------- */
+/* ---------- Színek (világos / sötét) – "Rajtszám piros" téma ---------- */
 :root {
   color-scheme: light;
-  --page: #f4f4f1;
-  --surface: #fcfcfb;
-  --surface-2: #f0efec;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #7a7873;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.10);
-  --accent: #2a78d6;
-  --accent-ink: #1c5cab;
-  --accent-wash: rgba(42, 120, 214, 0.10);
+  --page: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f4f4;
+  --ink: #111111;
+  --ink-2: #444444;
+  --muted: #767676;
+  --grid: #ececec;
+  --axis: #cfcfcf;
+  --border: rgba(0, 0, 0, 0.09);
+  --accent: #e10600;
+  --accent-ink: #c00500;
+  --accent-wash: rgba(225, 6, 0, 0.08);
   --good: #006300;
   --s1: #2a78d6; /* úszás / versenyző */
   --s2: #eb6834; /* kerékpár */
@@ -30,30 +30,31 @@
   --s4: #eda100; /* depók */
   --s4-ink: #0b0b0b;
   --ref: #9a988f; /* mezőny medián (referencia) */
-  --bar: #101418;
-  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+  --bar: #e10600;
+  --bar-ink: #ffffff;
+  --shadow: none;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
-    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8d86;
-    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-    --accent: #3987e5; --accent-ink: #86b6ef; --accent-wash: rgba(57,135,229,0.16);
+    --page: #0f0f10; --surface: #161617; --surface-2: #202022;
+    --ink: #f2f2f2; --ink-2: #c4c4c4; --muted: #8e8e8e;
+    --grid: #2a2a2c; --axis: #3a3a3d; --border: rgba(255,255,255,0.10);
+    --accent: #ff3b30; --accent-ink: #ff6a61; --accent-wash: rgba(255,59,48,0.14);
     --good: #0ca30c;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s4-ink: #0b0b0b;
-    --ref: #6f6d67; --bar: #000; --shadow: none;
+    --ref: #6f6d67; --bar: #b80500; --bar-ink: #ffffff; --shadow: none;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
-  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8d86;
-  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-  --accent: #3987e5; --accent-ink: #86b6ef; --accent-wash: rgba(57,135,229,0.16);
+  --page: #0f0f10; --surface: #161617; --surface-2: #202022;
+  --ink: #f2f2f2; --ink-2: #c4c4c4; --muted: #8e8e8e;
+  --grid: #2a2a2c; --axis: #3a3a3d; --border: rgba(255,255,255,0.10);
+  --accent: #ff3b30; --accent-ink: #ff6a61; --accent-wash: rgba(255,59,48,0.14);
   --good: #0ca30c;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s4-ink: #0b0b0b;
-  --ref: #6f6d67; --bar: #000; --shadow: none;
+  --ref: #6f6d67; --bar: #b80500; --bar-ink: #ffffff; --shadow: none;
 }
 
 /* ---------- Alap ---------- */
@@ -76,19 +77,19 @@ main.wrap { flex: 1; padding-top: 28px; padding-bottom: 48px; outline: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- Fejléc ---------- */
-.topbar { background: var(--bar); color: #f0efec; position: sticky; top: 0; z-index: 20; }
+.topbar { background: var(--bar); color: var(--bar-ink); position: sticky; top: 0; z-index: 20; }
 .topbar-inner { display: flex; align-items: center; gap: 16px; height: 56px; }
-.brand { display: flex; align-items: center; gap: 10px; color: #f0efec; white-space: nowrap; font-size: 15px; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; white-space: nowrap; font-size: 15px; }
 .brand:hover { text-decoration: none; }
 .brand b { font-family: Archivo, Inter, sans-serif; font-weight: 800; letter-spacing: -0.01em; }
-.brand em { font-style: normal; color: #9a988f; }
-.brand-mark { width: 26px; height: 26px; fill: #3987e5; }
+.brand em { font-style: normal; color: rgba(255,255,255,.72); }
+.brand-mark { width: 26px; height: 26px; fill: #fff; }
 .nav { display: flex; gap: 4px; margin-left: auto; }
-.nav a { color: #c3c2b7; padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; }
-.nav a:hover { color: #fff; background: rgba(255,255,255,.08); text-decoration: none; }
-.nav a.active { color: #fff; background: rgba(255,255,255,.12); }
-.theme-btn { background: none; border: 0; padding: 6px; border-radius: 8px; cursor: pointer; color: #c3c2b7; display: grid; place-items: center; }
-.theme-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav a { color: rgba(255,255,255,.88); padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; }
+.nav a:hover { color: #fff; background: rgba(0,0,0,.14); text-decoration: none; }
+.nav a.active { color: #fff; background: #111; }
+.theme-btn { background: none; border: 0; padding: 6px; border-radius: 8px; cursor: pointer; color: rgba(255,255,255,.88); display: grid; place-items: center; }
+.theme-btn:hover { background: rgba(0,0,0,.14); color: #fff; }
 .theme-btn svg { width: 20px; height: 20px; fill: currentColor; }
 @media (max-width: 640px) {
   .brand em { display: none; }
@@ -261,3 +262,50 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 @media (forced-colors: active) { .minibar i { border: 1px solid CanvasText; } }
 #lapSeg { flex-wrap: wrap; max-width: 100%; }
 #lapSeg button { min-width: 0; }
+
+/* =====================================================================
+   "Rajtszám piros" téma: fejlécfotó + szögletes, sportos elemek
+   ===================================================================== */
+#hero:empty { display: none; }
+.hero { position: relative; overflow: hidden; color: #fff; background: #111; }
+.hero-bg { position: absolute; inset: 0; background-size: cover; background-repeat: no-repeat; }
+.hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(17,17,17,.92), rgba(17,17,17,.25) 70%); }
+.hero-in { position: relative; max-width: 1080px; margin: 0 auto; padding: 120px 16px 36px; }
+.hero.compact .hero-in { padding: 64px 16px 28px; }
+.hero-eyebrow { display: inline-block; background: var(--accent); color: #fff; padding: 6px 10px; font: 600 13px/1 Inter, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.hero-title { margin: 14px 0 0; font: 800 clamp(44px, 8vw, 92px)/.95 Archivo, Inter, sans-serif; letter-spacing: -0.03em; text-transform: uppercase; }
+.hero.compact .hero-title { font-size: clamp(36px, 6vw, 64px); }
+.hero-lead { max-width: 56ch; margin: 14px 0 0; font-size: 16px; color: rgba(255,255,255,.9); }
+.hero-stats { display: flex; flex-wrap: wrap; gap: 12px 36px; margin-top: 28px; }
+.hero-stats div { display: flex; flex-direction: column; min-width: 0; }
+.hero-stats b { font: 700 32px/1.1 Inter, sans-serif; letter-spacing: -0.01em; }
+.hero-stats span { font-size: 12px; color: rgba(255,255,255,.8); }
+.hero-stats a { color: #fff; text-decoration: underline; text-decoration-color: rgba(255,255,255,.4); }
+.hero-credit { position: absolute; right: 12px; bottom: 8px; font-size: 11px; color: rgba(255,255,255,.75); }
+.hero-credit a { color: inherit; }
+@media (max-width: 640px) {
+  .hero-in { padding-top: 72px; }
+  .hero-stats { gap: 10px 24px; }
+  .hero-stats b { font-size: 24px; }
+}
+
+/* szögletes kártyák, nagybetűs fejlécek */
+.card, .tile, .list, .notice { border-radius: 0; }
+.list { border-left: 0; border-right: 0; }
+.list-head, th { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.row .cnt { color: var(--accent-ink); }
+.letters button { border-radius: 0; }
+.letters button.active { background: var(--accent); color: #fff; }
+.seg { border-radius: 0; }
+.seg button { border-radius: 0; }
+.btn, .pager a, .search input, select { border-radius: 0; }
+.page-head .eyebrow { text-transform: uppercase; letter-spacing: .1em; font-size: 12px; font-weight: 600; }
+.page-head .eyebrow a { color: var(--accent-ink); }
+h2 { text-transform: uppercase; letter-spacing: .02em; font-size: 15px; }
+.tile .label { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.card-head h2 + p, .card-head p { text-transform: none; }
+main.wrap { padding-top: 32px; }
+/* a tartalmi linkek fekete szövegként, a piros csak kiemelés + rámutatás */
+main a:not(.row) { color: var(--ink); font-weight: 500; }
+main a:not(.row):hover { color: var(--accent-ink); text-decoration: underline; }
+.page-head .eyebrow a { color: var(--accent-ink); }
