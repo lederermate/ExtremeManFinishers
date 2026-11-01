@@ -840,34 +840,56 @@
     const r = await fetch(`${ROOT_PATH}data/splits/${year}.json`);
     return r.ok ? r.json() : null;
   }
-  /** Betöltés + átalakítás: [[összidő, helyezés], ...] -> [[összidő, köridő, helyezés], ...] */
-  function loadLaps(year) {
-    if (!lapCache.has(year)) {
-      lapCache.set(year, fetchLaps(year).then((d) => {
-        if (!d) return null;
-        for (const k in d.athletes) {
-          d.athletes[k] = d.athletes[k].map((p, i, arr) => {
-            const prev = i ? arr[i - 1][0] : 0;
-            const lap = p[0] != null && (i === 0 || prev != null) ? p[0] - prev : null;
-            return [p[0], lap, p[1]];
-          });
-        }
-        return d;
-      }).catch(() => null));
+  /** Átalakítás: [[összidő, helyezés], ...] -> [[összidő, köridő, helyezés], ...] */
+  function expandLaps(d) {
+    if (!d) return null;
+    for (const k in d.athletes) {
+      d.athletes[k] = d.athletes[k].map((p, i, arr) => {
+        const prev = i ? arr[i - 1][0] : 0;
+        const lap = p[0] != null && (i === 0 || prev != null) ? p[0] - prev : null;
+        return [p[0], lap, p[1]];
+      });
     }
+    return d;
+  }
+  function loadLaps(year) {
+    if (!lapCache.has(year)) lapCache.set(year, fetchLaps(year).then(expandLaps).catch(() => null));
     return lapCache.get(year);
+  }
+  /** További verseny köridői (race_lap_data / data/splits_other/<kulcs>.json). */
+  function loadRaceLaps(key) {
+    const ck = `race:${key}`;
+    if (!lapCache.has(ck)) {
+      lapCache.set(ck, (async () => {
+        if (source === 'supabase') {
+          try {
+            const res = await fetch(rpcUrl('race_lap_data'), { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_key: key }) });
+            if (res.ok) {
+              const d = await res.json();
+              if (d && d.points && d.points.length) return expandLaps(d);
+            }
+          } catch (e) { /* tartalék fájl */ }
+        }
+        const r = await fetch(`${ROOT_PATH}data/splits_other/${key}.json`);
+        return r.ok ? expandLaps(await r.json()) : null;
+      })().catch(() => null));
+    }
+    return lapCache.get(ck);
   }
   const fmtPace = (s) => `${Math.floor(s / 60)}:${pad2(Math.round(s % 60))}`;
   const paceStep = (span) => [5, 10, 15, 20, 30, 60, 120, 300].find((st) => span / st <= 4) || 300;
 
-  async function renderLaps(host, a, year) {
+  /** Körönkénti nézet. opts: { load: () => Promise<lap adat>, raceKey, people: Map } –
+   *  alapból a nagyatádi teljes táv adott évi köztes ideje. */
+  async function renderLaps(host, a, year, opts = {}) {
     const token = (host.dataset.token = String(Math.random()));
+    const uid = `L${token.slice(2, 9)}`;
     hideTip();
-    const d = await loadLaps(year);
+    const d = await (opts.load ? opts.load() : loadLaps(year));
     if (host.dataset.token !== token || !host.isConnected) return; // időközben máshová kattintottak
     const mine = d && d.athletes[String(a.id)];
     if (!mine) {
-      host.innerHTML = `<p class="muted">Erre az évre nincsenek köztes mérőpont adatok.</p>`;
+      host.innerHTML = `<p class="muted">${opts.raceKey ? 'Ehhez a versenyhez' : 'Erre az évre'} nincsenek köztes mérőpont adatok.</p>`;
       return;
     }
     const P = d.points;
@@ -875,7 +897,7 @@
     const withMedian = others.length >= 20;
     // Szakaszok: a túl rövid mérőszakaszokat (fordító, gyógyfürdő, 1,5 km-es
     // kerékpáros pontok) összevonjuk a következővel, hogy a tempó ne ugráljon.
-    const MIN_KM = { swim: 1, bike: 8, run: 4 };
+    const MIN_KM = { swim: 1, kayak: 1, bike: 8, run: 4 };
     const groups = (disc) => {
       const out = [];
       let acc = null;
@@ -902,23 +924,31 @@
       swim: (t, km) => t / (km * 10),          // mp / 100 m
       bike: (t, km) => km / (t / 3600),        // km/h
       run: (t, km) => t / km,                  // mp / km
+      kayak: (t, km) => t / km,                // mp / km
     };
+    const personOfId = (id) => M.A.get(id) || (opts.people && opts.people.get(id)) || null;
     const sexWord = a.sex === 'F' ? 'a nők között' : a.sex === 'M' ? 'a férfiak között' : 'nemenként';
 
-    const specs = [
-      { disc: 'swim', title: 'Úszás', unit: 'perc/100 m', color: 'var(--s1)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 20, max: 3.8 },
-      { disc: 'bike', title: 'Kerékpár', unit: 'km/h', color: 'var(--s2)', invert: false, fmt: (v) => v.toFixed(1).replace('.', ','), minSpan: 4, max: 180 },
-      { disc: 'run', title: 'Futás', unit: 'perc/km', color: 'var(--s3)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 30, max: 42.2 },
-    ];
+    // a versenyen előforduló szakaszok, az első előfordulás sorrendjében (duatlonnál
+    // futás – kerékpár – futás, quadrathlonnál kajak is); a táv a mérőpontokból jön
+    const SPEC = {
+      swim: { title: 'Úszás', unit: 'perc/100 m', color: 'var(--s1)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 20 },
+      kayak: { title: 'Kajak', unit: 'perc/km', color: 'var(--s4)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 30 },
+      bike: { title: 'Kerékpár', unit: 'km/h', color: 'var(--s2)', invert: false, fmt: (v) => v.toFixed(1).replace('.', ','), minSpan: 4 },
+      run: { title: 'Futás', unit: 'perc/km', color: 'var(--s3)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 30 },
+    };
+    const specs = [...new Set(P.map((q) => q.disc).filter((x) => SPEC[x]))]
+      .map((disc) => ({ disc, ...SPEC[disc], max: Math.round(P.filter((q) => q.disc === disc).reduce((t, q) => t + (q.km || 0), 0) * 10) / 10 }))
+      .filter((sp) => sp.max > 0 && groups(sp.disc).length >= 2);  // egyetlen mérőpontból nincs mit rajzolni
     host.innerHTML = `
       ${legendHtml([{ name: a.name, color: 'var(--ink-2)' }, ...(withMedian ? [{ name: 'Mezőny mediánja', color: 'var(--ref)' }] : [])])}
       <div class="split-multiples">${specs.map((sp) => `<div><h3><i class="key-dot" style="background:${sp.color}"></i>${sp.title}
-        <span class="muted" style="font-weight:400">· ${sp.unit}</span></h3><div class="chart" id="lap-${sp.disc}"></div></div>`).join('')}</div>
+        <span class="muted" style="font-weight:400">· ${sp.unit}</span></h3><div class="chart" id="${uid}-${sp.disc}"></div></div>`).join('')}</div>
       <p class="chart-note">Vízszintesen a megtett táv (km); minden pont egy mérőszakasz átlaga.${withMedian ? '' : ' Ehhez az évhez nincs elég mezőny-adat a medián vonalhoz.'}</p>
       <h3 style="font-size:15px;margin:22px 0 2px">A verseny lefolyása</h3>
       <p class="chart-note" style="margin:0 0 6px">Helyezés ${sexWord} az egyes mérőpontokon, az eltelt idő függvényében (feljebb = előrébb).</p>
-      <div class="chart" id="lap-race"></div>
-      <div class="pass-panel" id="passPanel"></div>`;
+      <div class="chart" id="${uid}-race"></div>
+      <div class="pass-panel" id="${uid}-pass"></div>`;
 
     for (const sp of specs) {
       const gs = groups(sp.disc);
@@ -944,10 +974,9 @@
         const v = median(others.map((o) => segTime(o, g)).filter(Boolean).map((t) => metric[sp.disc](t, g.km)));
         return v != null ? { x: g.x, y: v } : null;
       }).filter(Boolean) : [];
-      const ticks = sp.disc === 'bike' ? [0, 60, 120, 180] : sp.disc === 'run' ? [0, 10, 20, 30, 40] : [0, 1, 2, 3];
-      lineChart(document.getElementById(`lap-${sp.disc}`), {
+      lineChart(host.querySelector(`#${uid}-${sp.disc}`), {
         kind: 'num', invert: sp.invert, height: 210, yFmt: sp.fmt, yStep: sp.step, minSpan: sp.minSpan,
-        xDomain: [0, sp.max], xTicks: ticks, xFmt: (x) => `${x} km`,
+        xDomain: [0, sp.max], xFmt: (x) => `${x} km`,
         series: [
           ...(ref.length ? [{ name: 'Mezőny mediánja', color: 'var(--ref)', dots: false, points: ref }] : []),
           { name: sp.title, color: sp.color, points: pts },
@@ -958,7 +987,7 @@
           const p = pts.find((q) => q.x === x);
           if (!p) return null;
           const r = ref.find((q) => q.x === x);
-          const unit = sp.disc === 'bike' ? ' km/h' : sp.disc === 'swim' ? ' /100 m' : ' /km';
+          const unit = sp.disc === 'bike' ? ' km/h' : sp.disc === 'swim' ? ' /100 m' : ' /km';  // futás, kajak: /km
           const rank = mine[p.g.end] && mine[p.g.end][2];
           return `<div class="tt-title">${esc(p.g.label)} <span class="muted">(${p.g.km.toFixed(2).replace('.', ',')} km)</span></div>
             ${ttRow('Szakaszidő', fmt(p.t), sp.color)}
@@ -971,19 +1000,30 @@
 
     // a verseny lefolyása: helyezés az eltelt idő függvényében
     const race = P.map((p, i) => (mine[i] && mine[i][0] && mine[i][2] ? { x: mine[i][0] / 3600, y: mine[i][2], i } : null)).filter(Boolean);
-    const lastOf = (disc) => { const ii = P.map((p, i) => (p.disc === disc ? i : -1)).filter((i) => i >= 0); return ii.length ? mine[ii[ii.length - 1]][0] / 3600 : null; };
-    const firstOf = (disc) => { const i = P.findIndex((p) => p.disc === disc); return i > 0 && mine[i - 1] ? mine[i - 1][0] / 3600 : 0; };
     const end = race.length ? race[race.length - 1].x : 1;
-    const bands = [
-      { x0: 0, x1: lastOf('swim'), label: 'Úszás', fill: 'color-mix(in srgb, var(--s1) 9%, transparent)' },
-      { x0: firstOf('bike'), x1: lastOf('bike'), label: 'Kerékpár', fill: 'color-mix(in srgb, var(--s2) 9%, transparent)' },
-      { x0: firstOf('run'), x1: end, label: 'Futás', fill: 'color-mix(in srgb, var(--s3) 9%, transparent)' },
-    ].filter((b) => b.x1 != null);
+    // háttérsávok: az egymást követő azonos szakaszú mérőpontok blokkjai
+    const timeAt = (i) => (i < 0 ? 0 : mine[i] && mine[i][0] != null ? mine[i][0] / 3600 : null);
+    const bands = [];
+    P.forEach((q, i) => {
+      if (!SPEC[q.disc]) return;
+      const last = bands[bands.length - 1];
+      if (last && last.disc === q.disc && last.end === i - 1) { last.end = i; return; }
+      bands.push({ disc: q.disc, start: i, end: i });
+    });
+    for (const b of bands) {
+      let s0 = b.start - 1;
+      while (s0 >= 0 && timeAt(s0) == null) s0--;
+      let e0 = b.end;
+      while (e0 > b.start && timeAt(e0) == null) e0--;
+      Object.assign(b, { x0: timeAt(s0) ?? 0, x1: timeAt(e0), label: SPEC[b.disc].title,
+        fill: `color-mix(in srgb, ${SPEC[b.disc].color} 9%, transparent)` });
+    }
+    bands.splice(0, bands.length, ...bands.filter((b) => b.x1 != null && b.x1 > b.x0));
     const ranks = race.map((p) => p.y);
     // Előzések két egymást követő mérőpont között: az azonos nemű célba érkezők
     // közül ki volt előtted az előző ponton és mögötted ezen (megelőzted), ill. fordítva.
     const rivals = Object.entries(d.athletes).filter(([aid]) => Number(aid) !== a.id &&
-      (!a.sex || (M.A.get(Number(aid)) || {}).sex === a.sex));
+      (!a.sex || (personOfId(Number(aid)) || {}).sex === a.sex));
     const passes = race.map((p, k) => {
       if (!k) return null;
       const ip = race[k - 1].i, i = p.i;
@@ -998,10 +1038,10 @@
       up.sort((x, y) => x.t - y.t); down.sort((x, y) => x.t - y.t);
       return { from: P[ip].label, to: P[i].label, up, down };
     });
-    const panel = document.getElementById('passPanel');
+    const panel = host.querySelector(`#${uid}-pass`);
     const nameLink = (x) => {
-      const o = M.A.get(x.aid);
-      return o ? `<a href="${U.athlete(o.id, o.name, year)}">${esc(o.name)}</a>` : '';
+      const o = personOfId(x.aid);
+      return o ? `<a href="${U.athlete(o.id, o.name, opts.raceKey ? null : year)}">${esc(o.name)}</a>` : '';
     };
     const showPasses = (k) => {
       const ps = passes[k];
@@ -1010,7 +1050,7 @@
           <span class="muted">${fmt(mine[race[k - 1].i][0])} → ${fmt(mine[race[k].i][0])} · helyezés ${race[k - 1].y}. → ${race[k].y}.</span></div>
         <p><span class="pass-up">▲ Megelőzted (${ps.up.length})</span>${ps.up.length ? ps.up.map(nameLink).join(', ') : '<span class="muted">senkit</span>'}</p>
         <p><span class="pass-down">▼ Megelőzött (${ps.down.length})</span>${ps.down.length ? ps.down.map(nameLink).join(', ') : '<span class="muted">senki</span>'}</p>
-        <p class="chart-note">Az azonos nemű célba érkezők köztes ideje alapján; a nevekre kattintva az ő ugyanezen évi (${year}) versenyük nyílik meg. Másik szakaszhoz kattints egy másik pontra.</p>`;
+        <p class="chart-note">Az azonos nemű célba érkezők köztes ideje alapján; a nevekre kattintva ${opts.raceKey ? 'az adatlapjuk' : `az ő ugyanezen évi (${year}) versenyük`} nyílik meg. Másik szakaszhoz kattints egy másik pontra.</p>`;
     };
     // kezdetben a legtöbb előzéssel járó szakasz látszik
     let startK = 0;
@@ -1018,7 +1058,7 @@
     showPasses(startK);
     const hrs = [];
     for (let h = 0; h <= Math.ceil(end); h += end > 12 ? 3 : 2) hrs.push(h);
-    lineChart(document.getElementById('lap-race'), {
+    lineChart(host.querySelector(`#${uid}-race`), {
       kind: 'num', invert: true, height: 260, yFmt: (v) => `${Math.round(v)}.`, minSpan: 10, yMin: 1,
       xDomain: [0, Math.max(end, 1)], xTicks: hrs, xFmt: (h) => `${h} ó`, bands,
       series: [{ name: a.name, color: 'var(--ink-2)', points: race }],
@@ -1282,8 +1322,8 @@
   }
 
   function buildOther(d) {
-    const races = d.races.map(([key, year, series, seriesName, name, segLabels, n, best, med]) => ({
-      key, year, series, seriesName, name, n, best, median: med, res: [],
+    const races = d.races.map(([key, year, series, seriesName, name, segLabels, n, best, med, hasLaps]) => ({
+      key, year, series, seriesName, name, n, best, median: med, res: [], hasLaps: !!hasLaps,
       segLabels: Array.isArray(segLabels) ? segLabels : JSON.parse(segLabels || '[]'),
     }));
     const people = new Map();
@@ -1323,7 +1363,8 @@
           <thead><tr><th>Év</th><th>Táv</th><th class="r">Célidő</th><th class="r">Helyezés</th><th>Részidők</th></tr></thead>
           <tbody>${g.map((r) => `<tr>
             <td>${r.race.year}</td>
-            <td><a href="${U.race(r.race.key)}">${esc(r.race.name)}</a></td>
+            <td><a href="${U.race(r.race.key)}">${esc(r.race.name)}</a>${r.race.hasLaps
+              ? `<button type="button" class="lap-toggle" data-race="${r.race.key}" data-aid="${id}" aria-expanded="false">Körönként ▾</button>` : ''}</td>
             <td class="r"><b>${fmt(r.t)}</b></td>
             <td class="r">${r.pos}. <span class="muted">/ ${r.race.n}</span></td>
             <td class="segs">${r.race.segLabels.map((l, i) => (r.segs[i] != null ? `<span>${esc(l)} <b>${fmt(r.segs[i])}</b></span>` : '')).join('')}</td>
@@ -1346,6 +1387,30 @@
   document.addEventListener('click', (e) => {
     const b = e.target.closest && e.target.closest('[data-scroll]');
     if (b) document.getElementById(b.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest && e.target.closest('.lap-toggle');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('lap-row') ? tr.nextElementSibling : null;
+    if (open) { open.remove(); btn.setAttribute('aria-expanded', 'false'); btn.textContent = 'Körönként ▾'; return; }
+    btn.setAttribute('aria-expanded', 'true'); btn.textContent = 'Körönként ▴';
+    const row = document.createElement('tr');
+    row.className = 'lap-row';
+    row.innerHTML = `<td colspan="5"><div class="lap-host">${loadingHtml}</div></td>`;
+    tr.after(row);
+    // a lenyitott rész a táblázat látható szélességét kapja (mobilon a táblázat oldalra görgethető)
+    const wrap = tr.closest('.table-wrap');
+    const host = row.querySelector('.lap-host');
+    if (wrap) host.style.width = `${Math.max(260, wrap.clientWidth - 40)}px`;  // a .table-wrap két oldali 20 px-es belső margója nélkül
+    const O = await loadOther();
+    const key = btn.dataset.race, aid = Number(btn.dataset.aid);
+    const race = O && O.byKey.get(key);
+    const person = O && personOf(O, aid);
+    if (!race || !person) return;
+    renderLaps(host, person, race.year,
+      { load: () => loadRaceLaps(key), raceKey: key, people: O.people });
   });
 
   function fillOther(a) {

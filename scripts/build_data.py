@@ -161,6 +161,112 @@ def drop_too_fast(pts, points, med):
     return pts, dropped
 
 
+def write_anomalies(athletes, results, race_results, races, lap_flags):
+    """Automatikus adatellenőrzés -> data/anomalies.txt (átnézéshez)."""
+    out = []
+    A = athletes
+    nm = lambda aid: A[aid]["name"] if aid in A else f"#{aid}"
+    by_ath = defaultdict(list)
+    for r in results:
+        by_ath[r["athlete_id"]].append(("Nagyatád teljes táv", r["year"], "core", r))
+    for r in race_results:
+        by_ath[r["athlete_id"]].append((r["race"], r["year"], r["event"], r))
+    core_event = {}  # év -> a nagyatádi esemény (a többi nagyatádi táv ugyanazon a hétvégén)
+    for r in race_results:
+        if r["race"].startswith(f"{r['year']}-nagyatad-") and "aquatlon" not in r["race"]:
+            core_event[r["year"]] = r["event"]
+    # 1) ugyanaz a rendezvény kétszer
+    for aid, items in by_ath.items():
+        seen = defaultdict(list)
+        for name, year, ev, r in items:
+            ev_key = core_event.get(year, f"nagyatad-{year}") if ev == "core" else ev
+            seen[(year, ev_key)].append(f"{name}" + (f" [{r['how']}: „{r.get('row_name')}” {r.get('row_by')}]" if r.get("how") else ""))
+        for (year, ev), names in seen.items():
+            if len(names) > 1:
+                out.append(f"KÉT EREDMÉNY EGY RENDEZVÉNYEN  {year}  #{aid} {nm(aid)}: {', '.join(names)}")
+    # 2–3) részidők
+    for r in results:
+        if r.get("swim") is None:
+            continue
+        parts = [r.get(k) for k in ("swim", "t1", "bike", "t2", "run")]
+        if all(v is not None for v in parts) and abs(sum(parts) - r["finish"]) > 600:  # büntetés / korrekció ennél kisebb
+            out.append(f"RÉSZIDŐK ÖSSZEGE ≠ CÉLIDŐ  {r['year']}  #{r['athlete_id']} {nm(r['athlete_id'])}: "
+                       f"{sum(parts)} mp vs {r['finish']} mp")
+        if r["swim"] and r["swim"] < 40 * 60:
+            out.append(f"GYANÚS ÚSZÁS  {r['year']}  #{r['athlete_id']} {nm(r['athlete_id'])}: {r['swim'] // 60} perc")
+        if r.get("bike") and 180 / (r["bike"] / 3600) > 46:
+            out.append(f"GYANÚS KERÉKPÁR  {r['year']}  #{r['athlete_id']} {nm(r['athlete_id'])}: {180 / (r['bike'] / 3600):.1f} km/h")
+        if r.get("run") and r["run"] < 2 * 3600 + 20 * 60:
+            out.append(f"GYANÚS FUTÁS  {r['year']}  #{r['athlete_id']} {nm(r['athlete_id'])}: {r['run'] // 60} perc")
+        for k in ("t1", "t2"):
+            if r.get(k) and r[k] > 45 * 60:
+                out.append(f"HOSSZÚ DEPÓ ({k.upper()})  {r['year']}  #{r['athlete_id']} {nm(r['athlete_id'])}: {r[k] // 60} perc")
+    # 4) életkor
+    for aid, items in by_ath.items():
+        by = A.get(aid, {}).get("birth_year")
+        if not by:
+            continue
+        for name, year, ev, r in items:
+            age = year - by
+            if age < 16 or age > 80:
+                out.append(f"ÉLETKOR {age}  {year}  #{aid} {nm(aid)} ({by}): {name}")
+    # 5) nem-ütközés, 6) eltérő névírás
+    for aid, items in by_ath.items():
+        sexes = {r.get("row_sex") for _, _, _, r in items if r.get("row_sex")}
+        if len(sexes) > 1:
+            out.append(f"FÉRFI ÉS NŐI EREDMÉNY IS  #{aid} {nm(aid)}: "
+                       + ", ".join(f"{n} {y} ({r.get('row_sex')})" for n, y, _, r in items if r.get("row_sex")))
+        base = A[aid]["source_name"] if aid in A else ""
+        for name, year, ev, r in items:
+            rn = r.get("row_name")
+            if rn and base and name_sim(rn, base) == 0:
+                out.append(f"ELTÉRŐ NÉV  #{aid} {base}  <-  „{rn}” ({r.get('row_by')}) {name} {year}"
+                           + (f" [{r['how']}]" if r.get("how") else ""))
+    # 7) nagy helyezés-ugrás a köztes időkben
+    for year, bib, a, b, r0, r1 in lap_flags:
+        out.append(f"HELYEZÉS-UGRÁS  {year}  rajtszám {bib}: {a} → {b}: {r0}. → {r1}.")
+    kinds = defaultdict(int)
+    for l in out:
+        kinds[re.split(r"\s{2}", l)[0]] += 1
+    head = ["# Automatikus adatellenőrzés (build_data.py). Típusonként:"] + [f"#   {k}: {v}" for k, v in sorted(kinds.items())] + [""]
+    (DATA / "anomalies.txt").write_text("\n".join(head + sorted(out)) + "\n", encoding="utf-8")
+    print("Anomáliák: " + ", ".join(f"{k}: {v}" for k, v in sorted(kinds.items())))
+
+
+def fix_lap_gaps(points):
+    """Ha egy szakasz minden mérőpontja körszámozott ("N. kör", "Kör N"), és a számozásban
+    rés van (hiányzó mérőpont), a következő pont távja a kihagyott körökkel együtt értendő."""
+    rx = re.compile(r"(\d+)\.\s*k[öo]r|k[öo]r\s*(\d+)", re.I)
+    for disc in {p["disc"] for p in points}:
+        idx = [i for i, p in enumerate(points) if p["disc"] == disc]
+        nums = []
+        for i in idx:
+            m = rx.search(points[i]["label"])
+            nums.append(int(m.group(1) or m.group(2)) if m else None)
+        if len(idx) < 2 or None in nums or nums != sorted(nums):
+            continue
+        prev = 0
+        for i, n in zip(idx, nums):
+            if n - prev > 1 and points[i]["km"]:
+                points[i]["km"] = round(points[i]["km"] * (n - prev), 3)
+            prev = n
+
+
+def normalize_points_generic(points):
+    """Mint a normalize_points, de ismeretlen össztávval (további versenyek):
+    összesített km -> szakaszhossz, ha a sorozat növekvő és összege jóval nagyobb az utolsó értéknél."""
+    for disc in {p["disc"] for p in points}:
+        idx = [i for i, p in enumerate(points) if p["disc"] == disc]
+        kms = [points[i]["km"] for i in idx]
+        if len(kms) > 1 and all(k is not None for k in kms) and all(b > a for a, b in zip(kms, kms[1:])) \
+                and sum(kms) > kms[-1] * 1.3:
+            prev = 0.0
+            for i in idx:
+                cum = points[i]["km"]
+                points[i]["km"] = round(cum - prev, 3)
+                prev = cum
+
+
 def normalize_points(points):
     """A mérőpontok "km" értéke legyen a SZAKASZ hossza. Néhány évben (pl. 2015)
     a rajttól mért összesített táv szerepel, máshol hiányzik – javítjuk."""
@@ -231,10 +337,12 @@ def main() -> None:
         """A licencszám néha hibás az EvoChipen (pl. két különböző ember ugyanazzal):
         csak akkor fogadjuk el, ha a név is hasonlít, vagy egyezik a születési év."""
         a = athletes[aid]
-        ok = name_sim(row["name"], a["source_name"]) > 0 or (row.get("birth_year") and a["birth_year"] == row["birth_year"])
+        sim = name_sim(row["name"], a["source_name"])
+        same_by = bool(row.get("birth_year")) and a["birth_year"] == row["birth_year"]
+        ok = sim >= 0.5 or (sim > 0 and same_by)
         if not ok:
             lic_rejects.append(f"LICENC? „{row['name']}” ({row.get('birth_year')}) licence {row.get('license')} "
-                               f"= #{aid} {a['source_name']} ({a['birth_year']}) – elutasítva, a név és a szül. év sem egyezik")
+                               f"= #{aid} {a['source_name']} ({a['birth_year']}) – elutasítva, a név (és a szül. év) nem egyezik")
         return ok
 
     def absorb(a, row):
@@ -272,7 +380,8 @@ def main() -> None:
             a = athletes[r["athlete_id"]]
             for k in SPLIT_FIELDS:
                 r[k] = row[k]
-            r.update(club=row["club"], bib=row["bib"], sex_rank=row["sex_rank"], source="extremetour+evochip")
+            r.update(club=row["club"], bib=row["bib"], sex_rank=row["sex_rank"], source="extremetour+evochip",
+                     row_name=row["name"], row_sex=row["sex"], row_by=row["birth_year"])
             absorb(a, row)
             remember(a["id"], row)
             linked += 1
@@ -295,7 +404,8 @@ def main() -> None:
                     r = yres[j]
                     for k in SPLIT_FIELDS:
                         r[k] = row[k]
-                    r.update(club=row["club"], bib=row["bib"], sex_rank=row["sex_rank"], source="extremetour+evochip")
+                    r.update(club=row["club"], bib=row["bib"], sex_rank=row["sex_rank"], source="extremetour+evochip",
+                     row_name=row["name"], row_sex=row["sex"], row_by=row["birth_year"])
                     linked += 1
                     report.append(f"DÚSÍTÁS {year} CSAK IDŐ: EvoChip „{row['name']}” ({row['birth_year']}) ≈ "
                                   f"#{r['athlete_id']} {athletes[r['athlete_id']]['source_name']} – csak részidők átvéve")
@@ -378,7 +488,13 @@ def main() -> None:
     side_stats = defaultdict(int)
     for f in sorted((DATA / "races").glob("2*.json")) if (DATA / "races").exists() else []:
         rc = json.loads(f.read_text(encoding="utf-8"))
-        rows = sorted(rc["rows"], key=lambda r: r["finish"])
+        # kiskorúak kihagyása (nyílt rövid távokon kategória nélkül is indulnak gyerekek):
+        # aki a születési éve alapján 16 évesnél fiatalabb volt, nem kerül be
+        kids = [r for r in rc["rows"] if r["birth_year"] and rc["year"] - r["birth_year"] < 16]
+        side_stats["kiskorú (kihagyva)"] += len(kids)
+        rows = sorted((r for r in rc["rows"] if r not in kids), key=lambda r: r["finish"])
+        if not rows:
+            continue
         taken = set()
         for pos, row in enumerate(rows, start=1):
             by, aid, how = row["birth_year"], None, ""
@@ -404,7 +520,9 @@ def main() -> None:
             taken.add(aid)
             remember(aid, row)
             side_stats[how] += 1
-            race_results.append({"race": rc["key"], "athlete_id": aid, "pos": pos, "sex_rank": row["sex_rank"],
+            race_results.append({"race": rc["key"], "event": rc["event"], "year": rc["year"], "row_name": row["name"],
+                                 "row_sex": row["sex"], "row_by": row["birth_year"], "how": how,
+                                 "athlete_id": aid, "pos": pos, "sex_rank": row["sex_rank"], "bib": row.get("bib"),
                                  "finish": row["finish"], "segs": row["segs"], "club": row["club"]})
         ts = [r["finish"] for r in rows]
         races.append({"key": rc["key"], "year": rc["year"], "series": rc["series"], "series_name": rc["series_name"],
@@ -497,6 +615,7 @@ def main() -> None:
             results.append({
                 "athlete_id": aid, "year": year, "pos": pos, "finish": row["finish"],
                 "sex_rank": row["sex_rank"], "club": row["club"], "bib": row["bib"],
+                "row_name": row["name"], "row_sex": row["sex"], "row_by": row["birth_year"],
                 **{k: row[k] for k in SPLIT_FIELDS}, "source": "evochip",
             })
             if not row.get("ranked", True):
@@ -572,7 +691,7 @@ def main() -> None:
     }
     (DATA / "other.json").write_text(json.dumps(other, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     rs = ["-- Generálva: scripts/build_data.py. Futtatás: Supabase -> SQL Editor -> Run (a seed.sql UTÁN)",
-          "begin;", "truncate public.race_results, public.races;"]
+          "begin;", "truncate public.race_results, public.races cascade;"]
     if races:
         rs.append("insert into public.races (key, year, series, series_name, name, seg_labels, n, best_s, median_s) values")
         rs.append(",\n".join(
@@ -595,11 +714,13 @@ def main() -> None:
     by_bib = {(r["year"], r.get("bib")): r["athlete_id"] for r in results if r.get("bib") is not None}
     out_dir = DATA / "splits"
     lap_dropped = defaultdict(int)
+    lap_flags = []
     lap_years = []  # évenkénti SQL utasítások (két fájlba osztva, hogy beférjen az SQL Editorba)
     for f in sorted((DATA / "laps").glob("*.json")) if (DATA / "laps").exists() else []:
         lp = json.loads(f.read_text(encoding="utf-8"))
         year = lp["year"]
         normalize_points(lp["points"])
+        fix_lap_gaps(lp["points"])
         compact = {}
         # a mezőny medián összideje mérőpontonként (a kilógó idők felismeréséhez)
         med = []
@@ -613,6 +734,13 @@ def main() -> None:
                 dropped += d2
                 lap_dropped[year] += dropped
                 compact[int(bib)] = [[p[0], p[2]] for p in clean_pts]
+                rk = [(i, p[2], p[0]) for i, p in enumerate(clean_pts) if p and p[2] and p[0] is not None]
+                field = max((p[2] for a in lp["athletes"].values() for p in a if p and p[2]), default=1)
+                for (i0, r0, t0), (i1, r1, t1) in zip(rk, rk[1:]):
+                    # rövid (< 30 perces) szakaszon nagy helyezés-változás gyanús
+                    if t1 - t0 < 1800 and abs(r1 - r0) > max(40, field * 0.15) \
+                            and "tr" not in (lp["points"][i0]["disc"], lp["points"][i1]["disc"]):  # a depóban valós
+                        lap_flags.append((year, int(bib), lp["points"][i0]["label"], lp["points"][i1]["label"], r0, r1))
         ath = {str(by_bib[(year, b)]): v for b, v in compact.items()}
         out_dir.mkdir(exist_ok=True)
         (out_dir / f"{year}.json").write_text(
@@ -654,6 +782,86 @@ def main() -> None:
         body.append("commit;")
         (ROOT / "supabase" / fname).write_text("\n".join(body) + "\n", encoding="utf-8")
 
+    # ---- további versenyek köztes mérőpontjai (data/laps_other/<kulcs>.json) ----
+    rr_by_bib = defaultdict(dict)
+    for r in race_results:
+        if r.get("bib") is not None and str(r["bib"]).isdigit():
+            rr_by_bib[r["race"]][int(r["bib"])] = r["athlete_id"]
+    other_dir = DATA / "splits_other"
+    other_dir.mkdir(exist_ok=True)
+    for old in other_dir.glob("*.json"):
+        old.unlink()
+    race_lap_sql, n_other = [], 0
+    have = set()
+    for f in sorted((DATA / "laps_other").glob("*.json")) if (DATA / "laps_other").exists() else []:
+        lp = json.loads(f.read_text(encoding="utf-8"))
+        rkey = lp["key"]
+        if rkey not in rr_by_bib or not lp["points"]:
+            continue
+        normalize_points_generic(lp["points"])
+        fix_lap_gaps(lp["points"])
+        med = []
+        for i in range(len(lp["points"])):
+            v = sorted(a[i][0] for a in lp["athletes"].values() if i < len(a) and a[i][0] is not None)
+            med.append(v[len(v) // 2] if v else None)
+        ath = {}
+        for bib, pts in lp["athletes"].items():
+            aid = rr_by_bib[rkey].get(int(bib))
+            if aid is None:
+                continue  # pl. kiskorú vagy nem célba érkező
+            clean_pts, _ = drop_out_of_order(pts, med)
+            clean_pts, _ = drop_too_fast(clean_pts, lp["points"], med)
+            ath[aid] = [[p[0], p[2]] for p in clean_pts]
+        if not ath:
+            continue
+        have.add(rkey)
+        n_other += len(ath)
+        (other_dir / f"{rkey}.json").write_text(json.dumps(
+            {"key": rkey, "points": lp["points"], "athletes": {str(k): v for k, v in ath.items()}},
+            ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        race_lap_sql.append([
+            "insert into public.race_lap_points (race_key, idx, label, disc, km) values",
+            ",\n".join(f"({sql_str(rkey)},{i},{sql_str(q['label'])},{sql_str(q['disc'] or 'tr')},{'null' if q['km'] is None else q['km']})"
+                       for i, q in enumerate(lp["points"])) + ";",
+            "insert into public.race_result_laps (race_key, athlete_id, laps) values",
+            ",\n".join(f"({sql_str(rkey)},{aid},'{json.dumps(v, separators=(',', ':'))}')" for aid, v in sorted(ath.items())) + ";"])
+    # részekre osztva (~650 KB / fájl)
+    for old in (ROOT / "supabase").glob("seed_race_laps*.sql"):
+        old.unlink()
+    parts, cur, size = [], [], 0
+    for blk in race_lap_sql:
+        n = len("\n".join(blk))
+        if cur and size + n > 650_000:
+            parts.append(cur)
+            cur, size = [], 0
+        cur.append(blk)
+        size += n
+    if cur or not parts:
+        parts.append(cur)
+    for k, part in enumerate(parts, start=1):
+        fname = "seed_race_laps.sql" if k == 1 else f"seed_race_laps_{k}.sql"
+        body = [f"-- Generálva: scripts/build_data.py. További versenyek köztes mérőpontjai ({k}/{len(parts)}. rész).",
+                "begin;"]
+        if k == 1:
+            body.append("truncate public.race_lap_points, public.race_result_laps;")
+        for blk in part:
+            body += blk
+        body.append("commit;")
+        (ROOT / "supabase" / fname).write_text("\n".join(body) + "\n", encoding="utf-8")
+    print(f"További versenyek köztes mérőpontjai: {len(have)} verseny, {n_other} versenyző")
+    # a versenylistában jelöljük, melyikhez van köridő
+    oth = json.loads((DATA / "other.json").read_text(encoding="utf-8"))
+    for rc in oth["races"]:
+        if len(rc) < 10:
+            rc.append(False)
+        rc[9] = rc[0] in have
+    (DATA / "other.json").write_text(json.dumps(oth, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    rs_path = ROOT / "supabase" / "seed_races.sql"
+    rs_txt = rs_path.read_text(encoding="utf-8").replace("\ncommit;\n",
+        "\nupdate public.races set has_laps = (key in (" + (",".join(sql_str(k) for k in sorted(have)) or "''") + "));\ncommit;\n")
+    rs_path.write_text(rs_txt, encoding="utf-8")
+
+    write_anomalies(athletes, results, race_results, races, lap_flags)
     print(f"Összesen: {len(athletes)} versenyző, {len(results)} eredmény "
           f"({sum(1 for r in results if r.get('swim') is not None)} részidővel)")
     print("Kimenet: supabase/seed.sql, data/finishers.json, data/match_report.txt")

@@ -100,8 +100,15 @@ Székesfehérvár, Nágocs, Nagyatád többi táva) 2015-től – az események 
 szkript elején (`EVENTS`):
 
 ```bash
-python3 scripts/evochip_races.py   # -> data/races/*.json
+python3 scripts/evochip_races.py     # -> data/races/*.json
+python3 scripts/scrape_other_laps.py # köztes mérőpontok -> data/laps_other/*.json
+python3 scripts/build_data.py        # -> supabase/seed_races.sql, seed_race_laps*.sql
 ```
+
+A versenyző adatlapján a „További eXtremeMan versenyek” táblázatban a köridős
+versenyeknél a **Körönként ▾** gomb nyitja le a részletes grafikonokat.
+A `data/anomalies.txt` a gyanús adatokat listázza (pl. két eredmény egy napon,
+helyezés-ugrás, női/férfi ütközés) – új adatok betöltése után érdemes átnézni.
 
 **Automatikus frissítés:** ha a `supabase/` mappa változása felkerül a `main` ágra, a
 `.github/workflows/supabase-seed.yml` munkafolyamat magától lefuttatja az SQL fájlokat
@@ -109,7 +116,7 @@ python3 scripts/evochip_races.py   # -> data/races/*.json
 „Supabase adatbázis frissítése” → Run workflow.
 
 Kézi futtatás esetén az SQL Editorban sorban: `schema.sql` (ha változott), `seed.sql`,
-`seed_laps.sql`, `seed_laps_2.sql`, `seed_laps_3.sql`, `seed_races.sql`
+`seed_laps*.sql`, `seed_races.sql`, `seed_race_laps*.sql`
 (a teljes tartalmat cserélik), és a változásokat feltölteni a GitHubra.
 Ha a `schema.sql` változott, előbb azt (többször is futtatható).
 

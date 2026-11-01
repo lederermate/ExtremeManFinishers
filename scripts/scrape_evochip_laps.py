@@ -22,6 +22,7 @@ import json
 import re
 import time
 import urllib.parse
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -39,8 +40,15 @@ def get(params: dict, cache_name: str) -> str:
         return f.read_text(encoding="utf-8")
     url = BASE + "?" + urllib.parse.urlencode({**COMMON, "distance": DISTANCE, **params})
     req = urllib.request.Request(url, headers={"User-Agent": "ExtremeManFinishers importer"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        text = r.read().decode("utf-8", errors="replace")
+    for attempt in range(4):  # a szerver néha megszakítja a kapcsolatot
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                text = r.read().decode("utf-8", errors="replace")
+            break
+        except (OSError, urllib.error.URLError):
+            if attempt == 3:
+                raise
+            time.sleep(5 * (attempt + 1))
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(text, encoding="utf-8")
     time.sleep(0.4)
@@ -59,13 +67,15 @@ def to_sec(s: str):
 
 def disc_of(label: str):
     l = label.lower()
-    if l.startswith("úszás"):
+    if "úsz" in l or "swim" in l:
         return "swim"
-    if l.startswith("kerékpár") or l.startswith("bringa"):
+    if "kerékp" in l or "kerekp" in l or "bring" in l or "bike" in l or "bicikli" in l:
         return "bike"
-    if l.startswith("futás"):
+    if "kajak" in l or "kayak" in l:
+        return "kayak"
+    if "fut" in l or "run" in l:
         return "run"
-    if l.startswith("depó"):
+    if "dep" in l:
         return "tr"
     return None
 

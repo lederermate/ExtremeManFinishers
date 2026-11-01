@@ -41,7 +41,7 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          files="supabase/schema.sql supabase/seed.sql $(ls supabase/seed_laps*.sql | sort -V) supabase/seed_races.sql"
+          files="supabase/schema.sql supabase/seed.sql $(ls supabase/seed_laps*.sql | sort -V) supabase/seed_races.sql $(ls supabase/seed_race_laps*.sql 2>/dev/null | sort -V)"
           for f in $files; do
             echo "::group::$f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
@@ -55,4 +55,5 @@ jobs:
           psql "$DATABASE_URL" -At -c "select 'versenyzők: ' || count(*) from athletes" \
                                -c "select 'nagyatádi eredmények: ' || count(*) from results" \
                                -c "select 'köridők: ' || count(*) from result_laps" \
-                               -c "select 'további versenyek eredményei: ' || count(*) from race_results"
+                               -c "select 'további versenyek eredményei: ' || count(*) from race_results" \
+                               -c "select 'további versenyek köridői: ' || count(*) from race_result_laps"

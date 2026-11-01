@@ -107,7 +107,7 @@ def main() -> None:
     od_path = ROOT / "data" / "other.json"
     od = json.loads(od_path.read_text(encoding="utf-8")) if od_path.exists() else {"races": [], "athletes": [], "results": []}
     RACES = [{"key": k, "year": y, "series": sr, "series_name": sn, "name": nm, "segs": sl, "n": n, "best": b, "median": md, "res": []}
-             for k, y, sr, sn, nm, sl, n, b, md in od["races"]]
+             for k, y, sr, sn, nm, sl, n, b, md, *_ in od["races"]]
     for aid, name, by, sex in od["athletes"]:
         A[aid] = {"id": aid, "name": name, "by": by, "sex": sex, "res": [], "path": f"versenyzo/{aid}-{slug(name)}/"}
     for a in A.values():

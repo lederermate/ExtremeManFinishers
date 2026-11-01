@@ -1,0 +1,85 @@
+# Automatikus adatellenőrzés (build_data.py). Típusonként:
+#   ELTÉRŐ NÉV: 2
+#   FÉRFI ÉS NŐI EREDMÉNY IS: 1
+#   HELYEZÉS-UGRÁS: 34
+#   HOSSZÚ DEPÓ (T1): 1
+#   HOSSZÚ DEPÓ (T2): 1
+#   KÉT EREDMÉNY EGY RENDEZVÉNYEN: 38
+
+ELTÉRŐ NÉV  #3307 Zoran Bozinov  <-  „Arsic Aleksandar” (1964) Nagyatád teljes táv 2018
+ELTÉRŐ NÉV  #3377 Fritschek Györgyné  <-  „Fritschekné Irén” (1972) Nagyatád teljes táv 2016
+FÉRFI ÉS NŐI EREDMÉNY IS  #4490 Kiss Evelin: Nagyatád teljes táv 2020 (F), 2018-szekesfehervar-extrememan-51-5-szekesfehervar 2018 (M)
+HELYEZÉS-UGRÁS  2018  rajtszám 31: Bringa75km → Bringa81km: 117. → 220.
+HELYEZÉS-UGRÁS  2022  rajtszám 110: Úszás 1 → Úszás 2: 255. → 204.
+HELYEZÉS-UGRÁS  2022  rajtszám 111: Úszás 1 → Úszás 2: 122. → 57.
+HELYEZÉS-UGRÁS  2022  rajtszám 117: Úszás 1 → Úszás 2: 107. → 55.
+HELYEZÉS-UGRÁS  2022  rajtszám 120: Úszás 1 → Úszás 2: 217. → 160.
+HELYEZÉS-UGRÁS  2022  rajtszám 130: Úszás 2 → Úszás 3: 212. → 118.
+HELYEZÉS-UGRÁS  2022  rajtszám 133: Úszás 1 → Úszás 2: 270. → 220.
+HELYEZÉS-UGRÁS  2022  rajtszám 136: Úszás 1 → Úszás 2: 93. → 141.
+HELYEZÉS-UGRÁS  2022  rajtszám 148: Úszás 1 → Úszás 2: 168. → 115.
+HELYEZÉS-UGRÁS  2022  rajtszám 14: Úszás 1 → Úszás 2: 205. → 130.
+HELYEZÉS-UGRÁS  2022  rajtszám 158: Úszás 1 → Úszás 2: 268. → 216.
+HELYEZÉS-UGRÁS  2022  rajtszám 179: Úszás 1 → Úszás 2: 224. → 152.
+HELYEZÉS-UGRÁS  2022  rajtszám 207: Úszás 1 → Úszás 2: 229. → 159.
+HELYEZÉS-UGRÁS  2022  rajtszám 224: Úszás 1 → Úszás 2: 130. → 80.
+HELYEZÉS-UGRÁS  2022  rajtszám 228: Úszás 1 → Úszás 2: 125. → 53.
+HELYEZÉS-UGRÁS  2022  rajtszám 265: Úszás 1 → Úszás 2: 171. → 102.
+HELYEZÉS-UGRÁS  2022  rajtszám 269: Futás kör 7 → Futás kör 8: 173. → 116.
+HELYEZÉS-UGRÁS  2022  rajtszám 278: Úszás 1 → Úszás 2: 202. → 145.
+HELYEZÉS-UGRÁS  2022  rajtszám 295: Úszás 1 → Úszás 2: 136. → 84.
+HELYEZÉS-UGRÁS  2022  rajtszám 359: Úszás 1 → Úszás 2: 190. → 142.
+HELYEZÉS-UGRÁS  2022  rajtszám 367: Úszás 1 → Úszás 2: 198. → 136.
+HELYEZÉS-UGRÁS  2022  rajtszám 501: Úszás 1 → Úszás 2: 214. → 122.
+HELYEZÉS-UGRÁS  2022  rajtszám 54: Úszás 1 → Úszás 2: 201. → 127.
+HELYEZÉS-UGRÁS  2022  rajtszám 65: Úszás 1 → Úszás 2: 228. → 166.
+HELYEZÉS-UGRÁS  2022  rajtszám 69: Úszás 1 → Úszás 2: 258. → 201.
+HELYEZÉS-UGRÁS  2022  rajtszám 70: Úszás 1 → Úszás 2: 121. → 72.
+HELYEZÉS-UGRÁS  2022  rajtszám 73: Úszás 1 → Úszás 2: 119. → 69.
+HELYEZÉS-UGRÁS  2022  rajtszám 84: Úszás 1 → Úszás 2: 200. → 125.
+HELYEZÉS-UGRÁS  2022  rajtszám 888: Úszás 1 → Úszás 2: 185. → 106.
+HELYEZÉS-UGRÁS  2022  rajtszám 95: Úszás 1 → Úszás 2: 135. → 83.
+HELYEZÉS-UGRÁS  2022  rajtszám 972: Úszás 1 → Úszás 2: 195. → 116.
+HELYEZÉS-UGRÁS  2023  rajtszám 218: Úszás 1 → Úszás 2: 175. → 131.
+HELYEZÉS-UGRÁS  2023  rajtszám 30: Úszás 1 → Úszás 2: 184. → 85.
+HELYEZÉS-UGRÁS  2023  rajtszám 65: Kerékpár 164.8 Km → Kerékpár 180: 130. → 79.
+HOSSZÚ DEPÓ (T1)  2022  #4606 Nagy Róbert: 50 perc
+HOSSZÚ DEPÓ (T2)  2015  #3115 Medve László: 47 perc
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2018  #4325 Illés Krisztián: 2018-nagocs-ob [licenc: „Illés Krisztián” 1978], 2018-nagocs-sprint [licenc: „Illés Krisztián” 1978]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #201131 Belina Gábor: 2020-kaposvar-q30 [új: „Belina Gábor” 1976], 2020-kaposvar-t113 [licenc: „Belina Gábor” 1976]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #2260 Bunzel Lívia: 2020-kaposvar-t113 [licenc: „Recskiné Bunzel Lívia” 1980], 2020-kaposvar-t51 [licenc: „Recskiné Bunzel Lívia” 1980]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #2347 Lőrincz Gergely: 2020-kaposvar-t113 [licenc: „Lőrincz Gergely” 1989], 2020-kaposvar-t51 [licenc: „Lőrincz Gergely” 1989]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #2902 Dr. Gyenesei Attila: 2020-kaposvar-t113 [licenc: „Gyenesei Attila” 1972], 2020-kaposvar-t51 [licenc: „Gyenesei Attila” 1972]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #3058 Károlyi János: 2020-kaposvar-t113 [licenc: „Károlyi János” 1963], 2020-kaposvar-t25 [licenc: „Károlyi János” 1963]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #3133 Lakos István: 2020-kaposvar-t113 [licenc: „Lakos István” 1964], 2020-kaposvar-t25 [licenc: „Lakos István” 1964]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #3208 Zalotai Norbert: 2020-kaposvar-t113 [licenc: „Zalotai Norbert” 1976], 2020-kaposvar-t51 [licenc: „Zalotai Norbert” 1976]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #3333 Nagy Kornél: 2020-kaposvar-t113 [licenc: „Nagy Kornél” 1983], 2020-kaposvar-t51 [licenc: „Nagy Kornél” 1983]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #3740 Simon Viktória: 2020-kaposvar-t113 [licenc: „Simon Viktória” 1978], 2020-kaposvar-t51 [licenc: „Simon Viktória” 1978]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #3877 Varga Zoltán: 2020-kaposvar-t113 [licenc: „Varga Zoltán” 1976], 2020-kaposvar-t51 [licenc: „Varga Zoltán” 1976]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4027 Rottek Máté: 2020-kaposvar-t113 [licenc: „Rottek Máté” 1993], 2020-kaposvar-t51 [licenc: „Rottek Máté” 1993]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4050 Ludányi Péter: 2020-kaposvar-t113 [licenc: „Ludányi Péter” 1992], 2020-kaposvar-t51 [licenc: „Ludányi Péter” 1992]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4083 Lipkovics Bence: 2020-kaposvar-t113 [licenc: „Lipkovics Bence” 1996], 2020-kaposvar-t51 [licenc: „Lipkovics Bence” 1996]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4167 Pénzes Róbert: 2020-kaposvar-t113 [licenc: „Pénzes Róbert” 1967], 2020-kaposvar-t51 [licenc: „Pénzes Róbert” 1967]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4230 Csatordai Gergely: 2020-kaposvar-t113 [licenc: „Csatordai Gergely” 1987], 2020-kaposvar-t51 [licenc: „Csatordai Gergely” 1987]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4340 Homoki Béla: 2020-kaposvar-t113 [licenc: „Homoki Béla” 1972], 2020-kaposvar-t51 [licenc: „Homoki Béla” 1972]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4374 Dékány Ádám: 2020-kaposvar-t113 [licenc: „Dékány Ádám” 1981], 2020-kaposvar-t51 [licenc: „Dékány Ádám” 1981]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4402 Dr. Csima Ferenc: 2020-kaposvar-q30 [név+év: „Csima Ferenc” 1972], 2020-kaposvar-t113 [licenc: „Csima Ferenc” 1972]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4435 Kiss Balazs: 2020-kaposvar-t113 [licenc: „Kiss Balazs” 1988], 2020-kaposvar-t51 [licenc: „Kiss Balazs” 1988]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4441 Dr. Avin Houman: 2020-kaposvar-t113 [licenc: „Avin Houman” 1987], 2020-kaposvar-t51 [licenc: „Avin Houman” 1987]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4445 Neubauer Kristóf: 2020-kaposvar-t113 [licenc: „Neubauer Kristóf” 1989], 2020-kaposvar-t51 [licenc: „Neubauer Kristóf” 1989]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4511 Vojcsik Viktor: 2020-kaposvar-t113 [név+év: „Vojcsik Viktor” 1978], 2020-kaposvar-t51 [név+év: „Vojcsik Viktor” 1978]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4538 Virág Pál: 2020-kaposvar-t113 [licenc: „Virág Pál” 1994], 2020-kaposvar-t51 [licenc: „Virág Pál” 1994]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4564 Búz Csaba: 2020-kaposvar-t113 [licenc: „Búz Csaba” 1981], 2020-kaposvar-t51 [licenc: „Búz Csaba” 1981]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #4668 Bars Tamás: 2020-kaposvar-t113 [licenc: „Bars Tamás” 1983], 2020-kaposvar-t51 [licenc: „Bars Tamás” 1983]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #745 Dinnya Illés: 2020-kaposvar-t113 [licenc: „Dinya Illés” 1970], 2020-kaposvar-t25 [licenc: „Dinya Illés” 1970]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #992 Forgács Gyula: 2020-kaposvar-t113 [név+év: „Forgács Gyula” 1950], 2020-kaposvar-t51 [licenc: „Forgács Gyula” 1950]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2020  #997 Kollin Gergely: 2020-kaposvar-t113 [licenc: „Kollin Gergely” 1972], 2020-kaposvar-t51 [licenc: „Kollin Gergely” 1972]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2022  #201527 Dr. Földi Zsuzsanna: 2022-nagyatad-fm [új: „Dr. Földi Zsuzsanna” 1976], 2022-nagyatad-nm [név+év: „Dr. Földi Zsuzsanna” 1976], 2022-nagyatad-nym [név+év: „Dr. Földi Zsuzsanna” 1976]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2022  #4364 Szitka Péter: 2022-nagyatad-e985 [név+év: „Szitka Péter” 1976], 2022-nagyatad-nym [név+év: „Szitka Péter” 1976]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2024  #201615 Illés Marcell: 2024-kaposvar-10km [licenc: „Illés Marcell” 2007], 2024-kaposvar-21-9 [licenc: „Illés Marcell” 2007]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2024  #201638 Kiss Mirella: 2024-kaposvar-10km [név+év: „Kiss Mirella” 1976], 2024-kaposvar-21-9 [név+év: „Kiss Mirella” 1976]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2024  #3184 Havas Péter: 2024-nagyatad-itt [licenc: „Havas Péter” 1973], 2024-nagyatad-kvb [licenc: „Havas Peter” 1973]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2024  #4304 Kruska Zsuzsanna: 2024-kaposvar-21-9 [licenc: „Kruska Zsuzsanna” 1982], 2024-kaposvar-3-5km [név+év: „Kruska Zsuzsanna” 1982]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2024  #583 HANÁSZ ATTILA: 2024-kaposvar-113 [licenc: „Hanász Attila” 1981], 2024-kaposvar-3-5km [név+év: „Hanász Attila” 1981]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2025  #811 SINKÓ JÓZSEF: 2025-nagyatad-f10 [név+év: „Sinkó József” 1972], 2025-nagyatad-kvb [licenc: „Sinkó József” 1972]
+KÉT EREDMÉNY EGY RENDEZVÉNYEN  2026  #4834 Szécsényi Gábor: Nagyatád teljes táv, 2026-nagyatad-f05 [név+év: „Szécsényi Gábor” 1986]

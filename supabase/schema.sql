@@ -166,6 +166,8 @@ create table if not exists public.races (
   median_s     integer
 );
 
+alter table public.races add column if not exists has_laps boolean not null default false;
+
 create table if not exists public.race_results (
   race_key    text    not null references public.races(key) on delete cascade,
   athlete_id  integer not null references public.athletes(id) on delete cascade,
@@ -199,7 +201,7 @@ as $$
   with rr as (select key as race_key, row_number() over (order by year, key) - 1 as idx from public.races)
   select json_build_object(
     'races', (
-      select coalesce(json_agg(json_build_array(r.key, r.year, r.series, r.series_name, r.name, r.seg_labels, r.n, r.best_s, r.median_s)
+      select coalesce(json_agg(json_build_array(r.key, r.year, r.series, r.series_name, r.name, r.seg_labels, r.n, r.best_s, r.median_s, r.has_laps)
                                order by r.year, r.key), '[]'::json)
       from public.races r
     ),
@@ -217,3 +219,47 @@ as $$
 $$;
 revoke all on function public.other_data() from public;
 grant execute on function public.other_data() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- További versenyek köztes mérőpontjai (versenyzőnként, a seed együtt frissül)
+-- ---------------------------------------------------------------------
+create table if not exists public.race_lap_points (
+  race_key text     not null references public.races(key) on delete cascade,
+  idx      smallint not null,
+  label    text     not null,
+  disc     text     not null,
+  km       real,
+  primary key (race_key, idx)
+);
+create table if not exists public.race_result_laps (
+  race_key   text    not null references public.races(key) on delete cascade,
+  athlete_id integer not null references public.athletes(id) on delete cascade,
+  laps       jsonb   not null,        -- [[összidő_mp, helyezés], ...] a race_lap_points sorrendjében
+  primary key (race_key, athlete_id)
+);
+alter table public.race_lap_points  enable row level security;
+alter table public.race_result_laps enable row level security;
+drop policy if exists "race_lap_points: public read" on public.race_lap_points;
+create policy "race_lap_points: public read" on public.race_lap_points for select to anon, authenticated using (true);
+drop policy if exists "race_result_laps: public read" on public.race_result_laps;
+create policy "race_result_laps: public read" on public.race_result_laps for select to anon, authenticated using (true);
+revoke insert, update, delete, truncate on public.race_lap_points, public.race_result_laps from anon, authenticated;
+grant select on public.race_lap_points, public.race_result_laps to anon, authenticated;
+
+create or replace function public.race_lap_data(p_key text)
+returns json
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select json_build_object(
+    'key', p_key,
+    'points', (select coalesce(json_agg(json_build_object('label', p.label, 'disc', p.disc, 'km', p.km) order by p.idx), '[]'::json)
+               from public.race_lap_points p where p.race_key = p_key),
+    'athletes', (select coalesce(json_object_agg(l.athlete_id::text, l.laps), '{}'::json)
+                 from public.race_result_laps l where l.race_key = p_key)
+  );
+$$;
+revoke all on function public.race_lap_data(text) from public;
+grant execute on function public.race_lap_data(text) to anon, authenticated;

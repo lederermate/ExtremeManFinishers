@@ -355,7 +355,7 @@ main a.chip { color: var(--ink); }
 .chip.active .muted { color: rgba(255,255,255,.8); }
 .chip-main { background: var(--accent-wash); border-color: transparent; cursor: default; }
 .other-series + .other-series { margin-top: 22px; }
-.other-series h3 { font: 500 16px/1.2 Oswald, 'Source Sans 3', sans-serif; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 6px; }
+.other-series > h3 { font: 500 16px/1.2 Oswald, 'Source Sans 3', sans-serif; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 6px; }
 .other-table td.segs { white-space: normal; font-size: 13px; color: var(--muted); }
 .other-table td.segs span { display: inline-block; margin-right: 12px; white-space: nowrap; }
 .other-table td.segs b { color: var(--ink-2); font-weight: 600; }
@@ -369,3 +369,12 @@ main a.chip { color: var(--ink); }
 .chart .line.gap { stroke-dasharray: 3 5; opacity: .45; stroke-width: 1.5; }
 .key-dash { width: 18px; height: 0; border-top: 2px dashed currentColor; opacity: .6; display: inline-block; }
 .legend .key-dot[style*="surface-2"] { border: 1px solid var(--axis); }
+
+/* további versenyek: Körönként lenyitás */
+.lap-toggle { margin-left: 10px; font: 500 12px/1 'Source Sans 3', sans-serif; color: var(--accent-ink); background: var(--accent-wash);
+  border: 0; padding: 4px 8px; cursor: pointer; vertical-align: 1px; }
+.lap-toggle:hover { text-decoration: underline; }
+.other-table tr.lap-row > td { white-space: normal; background: var(--surface); padding: 14px 0 22px; }
+.other-table tr.lap-row:hover > td { background: var(--surface); }
+.lap-host { min-width: 0; }
+.lap-host { position: sticky; left: 0; }
