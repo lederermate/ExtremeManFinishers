@@ -88,3 +88,63 @@ $$;
 
 revoke all on function public.finisher_data() from public;
 grant execute on function public.finisher_data() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Köztes mérőpontok (EvoChip, 2022-től): úszás körök, kerékpár
+-- szakaszok, futás körök. Rajtszám + év a kulcs (ez akkor is stabil, ha a
+-- névpárosítás változik); a versenyzőhöz a lap_data() rendeli hozzá.
+-- laps: [[összidő_mp, nemenkénti_helyezés], ...] a lap_points sorrendjében
+-- ---------------------------------------------------------------------
+create table if not exists public.lap_points (
+  year   smallint not null,
+  idx    smallint not null,
+  label  text     not null,
+  disc   text     not null check (disc in ('swim', 'tr', 'bike', 'run')),
+  km     real,
+  primary key (year, idx)
+);
+
+create table if not exists public.result_laps (
+  year   smallint not null,
+  bib    integer  not null,
+  laps   jsonb    not null,
+  primary key (year, bib)
+);
+
+alter table public.lap_points  enable row level security;
+alter table public.result_laps enable row level security;
+
+drop policy if exists "lap_points: public read" on public.lap_points;
+create policy "lap_points: public read" on public.lap_points for select to anon, authenticated using (true);
+
+drop policy if exists "result_laps: public read" on public.result_laps;
+create policy "result_laps: public read" on public.result_laps for select to anon, authenticated using (true);
+
+revoke insert, update, delete, truncate on public.lap_points, public.result_laps from anon, authenticated;
+grant select on public.lap_points, public.result_laps to anon, authenticated;
+
+-- Egy év összes köztes adata (a mezőny mediánjához is kell), versenyzőnként.
+create or replace function public.lap_data(p_year integer)
+returns json
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select json_build_object(
+    'year', p_year,
+    'points', (
+      select coalesce(json_agg(json_build_object('label', p.label, 'disc', p.disc, 'km', p.km) order by p.idx), '[]'::json)
+      from public.lap_points p where p.year = p_year
+    ),
+    'athletes', (
+      select coalesce(json_object_agg(r.athlete_id::text, l.laps), '{}'::json)
+      from public.result_laps l
+      join public.results r on r.year = l.year and r.bib = l.bib
+      where l.year = p_year
+    )
+  );
+$$;
+
+revoke all on function public.lap_data(integer) from public;
+grant execute on function public.lap_data(integer) to anon, authenticated;
