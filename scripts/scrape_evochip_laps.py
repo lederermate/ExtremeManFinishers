@@ -5,6 +5,7 @@
 Használat:
   python3 scripts/scrape_evochip_laps.py Nagyatad25VIn 2025            # mindenki
   python3 scripts/scrape_evochip_laps.py Nagyatad24VIn 2024 --bibs 12,34  # csak ezek a rajtszámok
+  python3 scripts/scrape_evochip_laps.py Nagyatad18EAr 2018 --distance ''  # 2021 előtti események
 
 Kimenet: data/laps/<év>.json
   {
@@ -26,8 +27,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".cache" / "evochip"
+DISTANCE = "xman"
 BASE = "https://www.evochip.hu/results/result.php"
-COMMON = {"distance": "xman", "timepoint": "none", "lang": "hu", "css": "evochip.css",
+COMMON = {"timepoint": "none", "lang": "hu", "css": "evochip.css",
           "iframe": "0", "mobile": "1", "viewport": "450"}
 
 
@@ -35,7 +37,7 @@ def get(params: dict, cache_name: str) -> str:
     f = CACHE / cache_name
     if f.exists():
         return f.read_text(encoding="utf-8")
-    url = BASE + "?" + urllib.parse.urlencode({**COMMON, **params})
+    url = BASE + "?" + urllib.parse.urlencode({**COMMON, "distance": DISTANCE, **params})
     req = urllib.request.Request(url, headers={"User-Agent": "ExtremeManFinishers importer"})
     with urllib.request.urlopen(req, timeout=60) as r:
         text = r.read().decode("utf-8", errors="replace")
@@ -59,7 +61,7 @@ def disc_of(label: str):
     l = label.lower()
     if l.startswith("úszás"):
         return "swim"
-    if l.startswith("kerékpár"):
+    if l.startswith("kerékpár") or l.startswith("bringa"):
         return "bike"
     if l.startswith("futás"):
         return "run"
@@ -115,7 +117,10 @@ def main() -> None:
     ap.add_argument("event")
     ap.add_argument("year", type=int)
     ap.add_argument("--bibs", help="csak ezek a rajtszámok (vesszővel elválasztva)")
+    ap.add_argument("--distance", default="xman", help="táv-kód (2021 előtt üres: --distance '')")
     args = ap.parse_args()
+    global DISTANCE
+    DISTANCE = args.distance
 
     pids = list_pids(args.event)
     bibs = sorted(pids)

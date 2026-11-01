@@ -797,56 +797,80 @@
     const P = d.points;
     const others = Object.values(d.athletes);
     const withMedian = others.length >= 20;
-    const idx = (disc) => P.map((p, i) => (p.disc === disc && p.km ? i : -1)).filter((i) => i >= 0);
-    const metric = {
-      swim: (lap, km) => lap / (km * 10),          // mp / 100 m
-      bike: (lap, km) => km / (lap / 3600),        // km/h
-      run: (lap, km) => lap / km,                  // mp / km
+    // Szakaszok: a túl rövid mérőszakaszokat (fordító, gyógyfürdő, 1,5 km-es
+    // kerékpáros pontok) összevonjuk a következővel, hogy a tempó ne ugráljon.
+    const MIN_KM = { swim: 1, bike: 8, run: 4 };
+    const groups = (disc) => {
+      const out = [];
+      let acc = null;
+      P.forEach((p, i) => {
+        if (p.disc !== disc || !p.km) return;
+        if (!acc) acc = { start: i, km: 0 };
+        acc.km += p.km;
+        acc.end = i;
+        if (acc.km >= MIN_KM[disc] - 1e-6) { out.push(acc); acc = null; }
+      });
+      if (acc) {
+        if (out.length) { const l = out[out.length - 1]; l.km += acc.km; l.end = acc.end; } else out.push(acc);
+      }
+      let km = 0;
+      for (const g of out) { km += g.km; g.x = Math.round(km * 100) / 100; g.label = P[g.end].label; }
+      return out;
     };
-    const med = (i, disc) => median(others.map((pts) => pts[i] && pts[i][1] ? metric[disc](pts[i][1], P[i].km) : null).filter((v) => v != null));
+    const segTime = (pts, g) => {
+      const endT = pts[g.end] && pts[g.end][0];
+      const prevT = g.start === 0 ? 0 : pts[g.start - 1] && pts[g.start - 1][0];
+      return endT != null && prevT != null && endT > prevT ? endT - prevT : null;
+    };
+    const metric = {
+      swim: (t, km) => t / (km * 10),          // mp / 100 m
+      bike: (t, km) => km / (t / 3600),        // km/h
+      run: (t, km) => t / km,                  // mp / km
+    };
     const sexWord = a.sex === 'F' ? 'a nők között' : a.sex === 'M' ? 'a férfiak között' : 'nemenként';
 
     const specs = [
-      { disc: 'swim', title: 'Úszás', unit: 'perc/100 m, körönként', color: 'var(--s1)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 20 },
-      { disc: 'bike', title: 'Kerékpár', unit: 'km/h, szakaszonként', color: 'var(--s2)', invert: false, fmt: (v) => v.toFixed(1).replace('.', ','), minSpan: 4 },
-      { disc: 'run', title: 'Futás', unit: 'perc/km, körönként', color: 'var(--s3)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 30 },
+      { disc: 'swim', title: 'Úszás', unit: 'perc/100 m', color: 'var(--s1)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 20, max: 3.8 },
+      { disc: 'bike', title: 'Kerékpár', unit: 'km/h', color: 'var(--s2)', invert: false, fmt: (v) => v.toFixed(1).replace('.', ','), minSpan: 4, max: 180 },
+      { disc: 'run', title: 'Futás', unit: 'perc/km', color: 'var(--s3)', invert: true, fmt: fmtPace, step: paceStep, minSpan: 30, max: 42.2 },
     ];
     host.innerHTML = `
       ${legendHtml([{ name: a.name, color: 'var(--ink-2)' }, ...(withMedian ? [{ name: 'Mezőny mediánja', color: 'var(--ref)' }] : [])])}
       <div class="split-multiples">${specs.map((sp) => `<div><h3><i class="key-dot" style="background:${sp.color}"></i>${sp.title}
         <span class="muted" style="font-weight:400">· ${sp.unit}</span></h3><div class="chart" id="lap-${sp.disc}"></div></div>`).join('')}</div>
-      ${withMedian ? '' : '<p class="chart-note">Ehhez az évhez nincs elég mezőny-adat a medián vonalhoz.</p>'}
+      <p class="chart-note">Vízszintesen a megtett táv (km); minden pont egy mérőszakasz átlaga.${withMedian ? '' : ' Ehhez az évhez nincs elég mezőny-adat a medián vonalhoz.'}</p>
       <h3 style="font-size:15px;margin:22px 0 2px">A verseny lefolyása</h3>
       <p class="chart-note" style="margin:0 0 6px">Helyezés ${sexWord} az egyes mérőpontokon, az eltelt idő függvényében (feljebb = előrébb).</p>
       <div class="chart" id="lap-race"></div>`;
 
     for (const sp of specs) {
-      const ids = idx(sp.disc);
-      let km = 0;
-      const xs = ids.map((i, n) => (sp.disc === 'bike' ? (km += P[i].km) : n + 1));
-      const pts = ids.map((i, n) => (mine[i] && mine[i][1] ? { x: xs[n], y: metric[sp.disc](mine[i][1], P[i].km), i } : null)).filter(Boolean);
-      const ref = withMedian ? ids.map((i, n) => ({ x: xs[n], y: med(i, sp.disc), i })).filter((p) => p.y != null) : [];
+      const gs = groups(sp.disc);
+      const pts = gs.map((g) => { const t = segTime(mine, g); return t ? { x: g.x, y: metric[sp.disc](t, g.km), g, t } : null; }).filter(Boolean);
+      const ref = withMedian ? gs.map((g) => {
+        const v = median(others.map((o) => segTime(o, g)).filter(Boolean).map((t) => metric[sp.disc](t, g.km)));
+        return v != null ? { x: g.x, y: v } : null;
+      }).filter(Boolean) : [];
+      const ticks = sp.disc === 'bike' ? [0, 60, 120, 180] : sp.disc === 'run' ? [0, 10, 20, 30, 40] : [0, 1, 2, 3];
       lineChart(document.getElementById(`lap-${sp.disc}`), {
         kind: 'num', invert: sp.invert, height: 210, yFmt: sp.fmt, yStep: sp.step, minSpan: sp.minSpan,
-        xDomain: sp.disc === 'bike' ? [0, 180] : [0.7, ids.length + 0.3],
-        xTicks: sp.disc === 'bike' ? [0, 60, 120, 180] : xs,
-        xFmt: sp.disc === 'bike' ? (x) => `${x} km` : (x) => `${x}.`,
+        xDomain: [0, sp.max], xTicks: ticks, xFmt: (x) => `${x} km`,
         series: [
           ...(ref.length ? [{ name: 'Mezőny mediánja', color: 'var(--ref)', dots: false, points: ref }] : []),
           { name: sp.title, color: sp.color, points: pts },
         ],
         primary: ref.length ? 1 : 0,
-        ariaLabel: `${a.name} ${year}: ${sp.title.toLowerCase()} ${sp.unit}`,
+        ariaLabel: `${a.name} ${year}: ${sp.title.toLowerCase()}, ${sp.unit} mérőszakaszonként`,
         tip: (x) => {
           const p = pts.find((q) => q.x === x);
           if (!p) return null;
-          const pt = P[p.i], r = ref.find((q) => q.x === x);
+          const r = ref.find((q) => q.x === x);
           const unit = sp.disc === 'bike' ? ' km/h' : sp.disc === 'swim' ? ' /100 m' : ' /km';
-          return `<div class="tt-title">${esc(pt.label)}</div>
-            ${ttRow('Köridő', fmt(mine[p.i][1]), sp.color)}
+          const rank = mine[p.g.end] && mine[p.g.end][2];
+          return `<div class="tt-title">${esc(p.g.label)} <span class="muted">(${p.g.km.toFixed(2).replace('.', ',')} km)</span></div>
+            ${ttRow('Szakaszidő', fmt(p.t), sp.color)}
             ${ttRow(sp.disc === 'bike' ? 'Sebesség' : 'Tempó', sp.fmt(p.y) + unit)}
             ${r ? ttRow('Mezőny mediánja', sp.fmt(r.y) + unit, 'var(--ref)') : ''}
-            ${ttRow('Helyezés itt', mine[p.i][2] ? `${mine[p.i][2]}.` : '–')}`;
+            ${ttRow('Helyezés itt', rank ? `${rank}.` : '–')}`;
         },
       });
     }

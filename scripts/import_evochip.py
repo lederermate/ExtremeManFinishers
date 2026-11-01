@@ -21,7 +21,22 @@ from pathlib import Path
 import openpyxl
 
 ROOT = Path(__file__).resolve().parent.parent
-SECTIONS = {"férfi abszolút": "M", "női abszolút": "F"}
+SECTIONS = {"férfi abszolút": "M", "női abszolút": "F", "férfi": "M", "női": "F"}
+# az oszlopnevek évről évre változtak (2015: S/T1/B/T2/R, 2016–2019: Bringa, Depó1 ...)
+ALIASES = {
+    "Úszás": ("Úszás", "S"),
+    "Depó 1": ("Depó 1", "Depó1", "T1"),
+    "Bike": ("Bike", "Bringa", "B"),
+    "Depó 2": ("Depó 2", "Depó2", "T2"),
+    "Futás": ("Futás", "R"),
+}
+
+
+def col(rec, name):
+    for k in ALIASES.get(name, (name,)):
+        if k in rec:
+            return rec[k]
+    return None
 
 
 def to_sec(v):
@@ -80,11 +95,11 @@ def main(path: str, year: int) -> None:
             "country": clean(rec.get("Ország")),
             "city": clean(rec.get("Város")),
             "license": clean(rec.get("License")),
-            "swim": to_sec(rec.get("Úszás")),
-            "t1": to_sec(rec.get("Depó 1")),
-            "bike": to_sec(rec.get("Bike")),
-            "t2": to_sec(rec.get("Depó 2")),
-            "run": to_sec(rec.get("Futás")),
+            "swim": to_sec(col(rec, "Úszás")),
+            "t1": to_sec(col(rec, "Depó 1")),
+            "bike": to_sec(col(rec, "Bike")),
+            "t2": to_sec(col(rec, "Depó 2")),
+            "run": to_sec(col(rec, "Futás")),
             "finish": finish,
         })
 

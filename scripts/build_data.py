@@ -182,6 +182,27 @@ def main() -> None:
             linked += 1
             if key(row["name"]) != key(a["source_name"]):
                 report.append(f"DÚSÍTÁS {year} EvoChip „{row['name']}” ({row['birth_year']}) = #{a['id']} {a['source_name']}  [Δ{dt} mp]")
+        # maradékok: azonos célidő (±3 mp), de teljesen eltérő név (pl. házassági név,
+        # vagy az egyik forrás elírása) – csak a részidőket vesszük át, a személyes
+        # adatokat (szül. év, névjegy) nem, mert a személy nem biztos
+        for i, row in enumerate(evo[year]):
+            if i in used_rows:
+                continue
+            near = [j for j in free if abs(yres[j]["finish"] - row["finish"]) <= TIME_TOL]
+            if len(near) == 1:
+                rows_near = [k for k, rr in enumerate(evo[year]) if k not in used_rows
+                             and abs(rr["finish"] - yres[near[0]]["finish"]) <= TIME_TOL]
+                if rows_near == [i]:
+                    j = near[0]
+                    used_rows.add(i)
+                    free.discard(j)
+                    r = yres[j]
+                    for k in SPLIT_FIELDS:
+                        r[k] = row[k]
+                    r.update(club=row["club"], bib=row["bib"], sex_rank=row["sex_rank"], source="extremetour+evochip")
+                    linked += 1
+                    report.append(f"DÚSÍTÁS {year} CSAK IDŐ: EvoChip „{row['name']}” ({row['birth_year']}) ≈ "
+                                  f"#{r['athlete_id']} {athletes[r['athlete_id']]['source_name']} – csak részidők átvéve")
         for i, row in enumerate(evo[year]):
             if i not in used_rows:
                 report.append(f"DÚSÍTÁS {year} NINCS PÁR az extremetour listában: {row['name']} {row['finish']}s"
@@ -191,6 +212,49 @@ def main() -> None:
             report.append(f"DÚSÍTÁS {year} NINCS EvoChip ADAT: #{r['athlete_id']} {athletes[r['athlete_id']]['source_name']}")
         print(f"{year}: {linked}/{len(yres)} extremetour eredmény kapott EvoChip adatot "
               f"({len(evo[year]) - len(used_rows)} EvoChip sor párosítatlan)")
+
+    # ------------------------------------------------------------------
+    # DUPLIKÁTUMOK ÖSSZEVONÁSA – az extremetour.hu ugyanazt az embert néha több
+    # azonosítón vezeti. Összevonjuk, ha: azonos név (ékezet/titulus nélkül) +
+    # azonos születési év + soha nem indultak ugyanabban az évben.
+    # ------------------------------------------------------------------
+    years_of = defaultdict(set)
+    for r in results:
+        years_of[r["athlete_id"]].add(r["year"])
+    groups = defaultdict(list)
+    for a in athletes.values():
+        if a["birth_year"] and years_of[a["id"]]:
+            groups[(loose_key(a["source_name"]), a["birth_year"])].append(a)
+    remap = {}
+    for (nm, by), members in groups.items():
+        if len(members) < 2:
+            continue
+        # kanonikus: a legtöbb eredménnyel rendelkező (egyenlőségnél a kisebb azonosító)
+        members.sort(key=lambda a: (-len(years_of[a["id"]]), a["id"]))
+        canon = members[0]
+        for other in members[1:]:
+            if years_of[canon["id"]] & years_of[other["id"]]:
+                report.append(f"KÉTES  azonos név + szül. év, de egy évben is indultak – külön marad: "
+                              f"#{canon['id']} {canon['source_name']} / #{other['id']} {other['source_name']} ({by})")
+                continue
+            remap[other["id"]] = canon["id"]
+            years_of[canon["id"]] |= years_of[other["id"]]
+            accents = lambda n: sum(1 for c in n if ord(c) > 127)
+            if (canon["name"].isupper() and not other["name"].isupper()) or \
+                    (not other["name"].isupper() and accents(other["name"]) > accents(canon["name"])):
+                canon["name"] = other["name"]  # csupa nagybetű vagy ékezet nélküli írásmód helyett
+            if canon["sex"] is None:
+                canon["sex"] = other["sex"]
+            report.append(f"ÖSSZEVONÁS #{other['id']} {other['source_name']} {sorted(years_of[other['id']])} "
+                          f"-> #{canon['id']} {canon['source_name']} ({by})")
+    for r in results:
+        r["athlete_id"] = remap.get(r["athlete_id"], r["athlete_id"])
+    for idx_map in (ident_name, ident_lic):
+        for k, ids in idx_map.items():
+            idx_map[k] = {remap.get(i, i) for i in ids}
+    for old in remap:
+        athletes.pop(old, None)
+    print(f"Duplikátumok összevonva: {len(remap)} adatlap")
 
     # névindexek (a dúsítás után, mert az születési éveket is ad)
     by_key = defaultdict(list)
@@ -306,7 +370,7 @@ def main() -> None:
     used = {r["athlete_id"] for r in results}
     athletes = {k: v for k, v in athletes.items() if k in used}
 
-    order = {"KÉTES": 0, "MEGJ.": 1, "OK  ": 2, "DÚSÍ": 3}
+    order = {"KÉTES": 0, "MEGJ.": 1, "ÖSSZ": 2, "OK  ": 3, "DÚSÍ": 4}
     report.sort(key=lambda l: (order.get(l[:5].strip()[:4], 9), l))
     (DATA / "match_report.txt").write_text("\n".join(report) + "\n", encoding="utf-8")
 

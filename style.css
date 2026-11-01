@@ -259,3 +259,5 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
 @media (forced-colors: active) { .minibar i { border: 1px solid CanvasText; } }
+#lapSeg { flex-wrap: wrap; max-width: 100%; }
+#lapSeg button { min-width: 0; }
