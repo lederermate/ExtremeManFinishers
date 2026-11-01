@@ -124,4 +124,5 @@ Kézi javítás a `data/overrides.json`-ban:
 
 - Finisherek 1990–2025: [extremetour.hu](https://www.extremetour.hu/finisherekabc)
 - Részidők 2022–2026, eredmények 2026: [EvoChip](https://www.evochip.hu/results/)
-- Betűtípusok: Inter, Archivo (SIL Open Font License, `fonts/`)
+- Betűtípusok: Oswald, Source Sans 3 (SIL Open Font License, `fonts/`)
+- Fotók: [extrememan.hu](https://www.extrememan.hu/) (forrásmegjelöléssel)
