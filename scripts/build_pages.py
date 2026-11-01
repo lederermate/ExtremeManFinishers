@@ -133,13 +133,14 @@ def main() -> None:
     n_res = len(d["results"])
     best = min((r for rs in Y.values() for r in rs), key=lambda r: r["t"])
 
+    n_fin = sum(1 for a in A.values() if a["res"])  # csak a nagyatádi teljes táv finisherei
     # ---------------- főoldal ----------------
     top = sorted(A.values(), key=lambda a: (-len(a["res"]), a["name"]))[:10]
     content = f"""
     <div class="page-head">
       <h1>eXtremeMan Nagyatád finisherek</h1>
       <p class="lead">Az eXtremeMan Nagyatád teljes távú triatlon (3,8 km úszás, 180 km kerékpár, 42,2 km futás)
-        mind a {len(A)} célba érkezője {years[0]} és {years[-1]} között, összesen {n_res} célba érés.
+        mind a {n_fin} célba érkezője {years[0]} és {years[-1]} között, összesen {n_res} célba érés.
         Pályacsúcs: {fmt(best['t'])} ({esc(best['a']['name'])}, {best['year']}).</p>
     </div>
     <section class="card"><h2>Legtöbbször célba értek</h2><ol class="rank-list">{''.join(
@@ -148,7 +149,7 @@ def main() -> None:
     (ROOT / "index.html").write_text(page(
         depth=0,
         title="eXtremeMan Nagyatád finisherek – eredmények 1990 óta",
-        description=(f"Az eXtremeMan Nagyatád teljes táv mind a {len(A)} célba érkezője {years[0]}–{years[-1]}: "
+        description=(f"Az eXtremeMan Nagyatád teljes táv mind a {n_fin} célba érkezője {years[0]}–{years[-1]}: "
                      "eredmények, részidők, helyezések és egyéni trendgrafikonok. Keress rá a nevedre!"),
         canonical=SITE, content=content, years_html=years_html,
         jsonld=[{
