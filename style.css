@@ -159,7 +159,6 @@ select {
   display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px;
   background: var(--accent-wash); color: var(--accent-ink); margin-left: 6px; vertical-align: 1px;
 }
-.sentinel { height: 1px; }
 .empty { padding: 36px 16px; text-align: center; color: var(--muted); }
 @media (max-width: 560px) {
   .list-head, .row { grid-template-columns: minmax(0, 1fr) 44px 80px; }
@@ -179,6 +178,7 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .pb-tag { font-size: 11px; font-weight: 600; color: var(--accent-ink); background: var(--accent-wash); padding: 1px 6px; border-radius: 99px; margin-left: 6px; }
 .delta-good { color: var(--good); }
 .show-more { display: block; margin: 14px auto 0; }
+.show-more[hidden] { display: none; }
 
 /* ---------- Gombok ---------- */
 .btn {

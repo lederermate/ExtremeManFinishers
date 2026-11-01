@@ -397,7 +397,6 @@
   function resetView() {
     observers.forEach((o) => o.disconnect());
     observers = [];
-    if (listObserver) { listObserver.disconnect(); listObserver = null; }
     hideTip();
   }
 
@@ -405,7 +404,7 @@
   // Nézet: versenyzőlista
   // ------------------------------------------------------------------
   const listState = { q: '', letter: '', sort: 'name', scroll: 0 };
-  let listObserver = null;
+  const PAGE = 100;
   const SORTS = {
     name: { label: 'Név szerint (A–Z)', fn: (a, b) => coll.compare(a.name, b.name) },
     count: { label: 'Célba érések száma', fn: (a, b) => b.count - a.count || coll.compare(a.name, b.name) },
@@ -451,12 +450,13 @@
       <div class="list" id="list">
         <div class="list-head"><span>Versenyző</span><span class="c-spark">Idők alakulása</span><span class="r">Célba</span><span class="r">Legjobb</span></div>
         <div id="rows"></div>
-        <div class="sentinel" id="sentinel"></div>
-      </div>`;
+      </div>
+      <button class="btn show-more" id="more" type="button" hidden></button>`;
 
     const $q = document.getElementById('q');
     const $rows = document.getElementById('rows');
     const $count = document.getElementById('countLine');
+    const $more = document.getElementById('more');
     let filtered = [], shown = 0;
 
     const rowHtml = (a) => `
@@ -470,9 +470,12 @@
 
     const more = () => {
       if (shown >= filtered.length) return;
-      const next = filtered.slice(shown, shown + 60);
+      const next = filtered.slice(shown, shown + PAGE);
       $rows.insertAdjacentHTML('beforeend', next.map(rowHtml).join(''));
       shown += next.length;
+      const left = filtered.length - shown;
+      $more.hidden = left <= 0;
+      $more.textContent = `Továbbiak betöltése (még ${nf.format(left)})`;
     };
 
     const apply = () => {
@@ -483,8 +486,9 @@
       $count.textContent = `${nf.format(filtered.length)} versenyző`;
       $rows.innerHTML = filtered.length ? '' : '<div class="empty">Nincs találat.</div>';
       shown = 0;
+      $more.hidden = true;
       more();
-      while (shown < Math.min(filtered.length, 60 * Math.ceil((listState.restore || 0) / 60))) more();
+      while (shown < Math.min(filtered.length, listState.restore || 0)) more();
       listState.restore = 0;
     };
 
@@ -502,8 +506,7 @@
       listState.restore = shown;
     });
 
-    listObserver = new IntersectionObserver((ents) => { if (ents.some((e) => e.isIntersecting)) more(); }, { rootMargin: '600px' });
-    listObserver.observe(document.getElementById('sentinel'));
+    $more.addEventListener('click', more);
     apply();
   }
 
