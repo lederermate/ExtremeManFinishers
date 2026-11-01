@@ -229,6 +229,8 @@ tr.pb td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .splitbar .rn { background: var(--s3); }
 .splitbar .tr { background: var(--s4); color: var(--s4-ink); }
 .split-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.split-multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 20px; }
+.split-multiples h3 { font-size: 14px; font-weight: 600; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
 .split-year h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
 
 /* ---------- Kétoszlopos elrendezés ---------- */

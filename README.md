@@ -3,7 +3,7 @@
 Az eXtremeMan Nagyatád teljes távú (3,8 km úszás · 180 km kerékpár · 42,2 km futás)
 **egyéni** célba érkezőinek névsora 1990-től, az
 [extremetour.hu Finisherek ABC](https://www.extremetour.hu/finisherekabc) mintájára,
-kiegészítve a 2026-os eredményekkel (EvoChip, részidőkkel).
+kiegészítve a 2026-os eredményekkel és 2022-től a részidőkkel (EvoChip).
 
 Statikus weboldal (HTML + CSS + JS, build lépés nélkül), GitHub Pages-en publikálva:
 https://lederermate.github.io/ExtremeManFinishers/
@@ -32,9 +32,9 @@ https://lederermate.github.io/ExtremeManFinishers/
 | `supabase/seed.sql` | az adatok betöltése (generált fájl) |
 | `scripts/` | adatgyűjtő és -építő szkriptek (lásd lent) |
 | `data/extremetour.json` | az extremetour.hu-ról letöltött nyers adatok (1990–2025) |
-| `data/evochip_2026.json`, `sources/evochip/` | a 2026-os EvoChip export és a kinyert adatok |
+| `data/evochip_<év>.json`, `sources/evochip/` | az EvoChip exportok (2022–2026) és a kinyert adatok |
 | `data/overrides.json` | kézi névpárosítások |
-| `data/match_report.txt` | a 2026-os nevek párosításának naplója |
+| `data/match_report.txt` | a párosítás naplója (EvoChip ↔ extremetour) |
 
 ## Beüzemelés
 
@@ -72,9 +72,11 @@ pip install openpyxl
 # 1990–2025 újratöltése az extremetour.hu-ról (36 oldal letöltése)
 python3 scripts/scrape_extremetour.py
 
-# új év az EvoChip XLSX exportjából (pl. 2026):
+# EvoChip XLSX exportok (2022-től vannak részidők; 2020: eXtremeManNagyatad20VIn):
 #   https://www.evochip.hu/results/xlsgen.php?eventid=Nagyatad26VIn&lang=hu&distance=xman
-python3 scripts/import_evochip.py sources/evochip/Nagyatad26VIn_xman.xlsx 2026
+for y in 22 23 24 25 26; do
+  python3 scripts/import_evochip.py sources/evochip/Nagyatad${y}VIn_xman.xlsx 20$y
+done
 
 # összefésülés -> supabase/seed.sql, data/finishers.json, data/match_report.txt
 python3 scripts/build_data.py
@@ -83,12 +85,21 @@ python3 scripts/build_data.py
 Utána a `supabase/seed.sql`-t újra lefuttatni az SQL Editorban (a teljes tartalmat
 cseréli), és a változásokat feltölteni a GitHubra.
 
-### Névpárosítás
+### Párosítás
 
-Az EvoChip nevek az extremetour.hu versenyzőihez név (+ születési év) alapján
-kapcsolódnak. Ha egy névhez több korábbi versenyző is tartozik és nem dönthető el,
-melyikről van szó, az új versenyzőként kerül be, és a `data/match_report.txt`-ben
-**KÉTES** jelölést kap. Kézi javítás a `data/overrides.json`-ban:
+- **Az extremetour.hu-n is szereplő években (2022–2025)** az EvoChip sorok célidő
+  (±3 mp) és névhasonlóság alapján kapcsolódnak a meglévő eredményekhez – így kapnak
+  részidőt, a versenyzők pedig születési évet és „EvoChip-névjegyet” (az EvoChip
+  névírása + szül. év, licencszám). Pl. az EvoChip „Szilágyi Tamás (1991)”
+  = extremetour „Szilágyi Tamás László”.
+- **Új évben (2026)** a sorrend: kézi párosítás → EvoChip név + szül. év / licencszám
+  egy korábbi évből → egyértelmű extremetour névegyezés → névrészlet + szül. év.
+  Ha egyik sem egyértelmű, új versenyzőként kerül be, és a `data/match_report.txt`-ben
+  **KÉTES** jelölést kap.
+- Célidővel, de helyezés nélkül szereplő versenyzők (pl. időbüntetés) beszámítanak –
+  az extremetour.hu is így számol (2023: Bars Tamás).
+
+Kézi javítás a `data/overrides.json`-ban:
 
 ```json
 { "2026": { "Varga István": 885, "Nagy Gábor": "new" } }
@@ -99,5 +110,5 @@ melyikről van szó, az új versenyzőként kerül be, és a `data/match_report.
 ## Források
 
 - Finisherek 1990–2025: [extremetour.hu](https://www.extremetour.hu/finisherekabc)
-- 2026: [EvoChip](https://www.evochip.hu/results/result.php?eventid=Nagyatad26VIn&distance=xman)
+- Részidők 2022–2026, eredmények 2026: [EvoChip](https://www.evochip.hu/results/)
 - Betűtípusok: Inter, Archivo (SIL Open Font License, `fonts/`)

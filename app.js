@@ -186,7 +186,7 @@
   function lineChart(el, opts) {
     const draw = () => {
       el.innerHTML = '';
-      const W = Math.max(280, el.clientWidth), H = W < 520 ? 240 : 300;
+      const W = Math.max(240, el.clientWidth), H = opts.height || (W < 520 ? 240 : 300);
       const m = { t: 22, r: opts.series.some((s) => s.endLabel) ? 64 : 16, b: 28, l: 52 };
       const iw = W - m.l - m.r, ih = H - m.t - m.b;
       const all = opts.series.flatMap((s) => s.points);
@@ -230,6 +230,11 @@
         t.textContent = x;
         svg.append(t);
       }
+      // végfeliratok: ha kettő túl közel kerülne egymáshoz, egyiket sem írjuk ki
+      // (ilyenkor a jelmagyarázat és a tooltip azonosít)
+      const ends = opts.series.filter((s) => s.endLabel && s.points.length)
+        .map((s) => sy(s.points[s.points.length - 1].y)).sort((p, q) => p - q);
+      const labelsCollide = ends.some((y, i) => i > 0 && y - ends[i - 1] < 14);
       // sorozatok
       for (const s of opts.series) {
         if (s.points.length > 1) {
@@ -241,7 +246,7 @@
             svg.append(svgEl('circle', { cx: sx(p.x), cy: sy(p.y), r: W < 520 && s.points.length > 15 ? 3 : 4, style: `fill:${s.color};stroke:var(--surface);stroke-width:2` }));
           }
         }
-        if (s.endLabel && s.points.length) {
+        if (s.endLabel && s.points.length && !labelsCollide) {
           const p = s.points[s.points.length - 1];
           const t = svgEl('text', { class: 'dlabel', x: sx(p.x) + 8, y: sy(p.y) + 4 });
           t.textContent = s.endLabel;
@@ -536,7 +541,7 @@
       ${a.count > 1 ? `<section class="card">
         <div class="card-head">
           <div><h2>Célidők évenként</h2><p id="trendNote"></p></div>
-          <div class="seg" role="tablist">
+          <div class="seg" id="trendSeg" role="tablist">
             <button type="button" data-m="time" class="active">Célidő</button>
             <button type="button" data-m="pct">Helyezés a mezőnyben</button>
           </div>
@@ -550,6 +555,16 @@
         <div class="chart" id="trend"></div>
         <p class="chart-note">${lastR.pos}. hely ${lastR.y.n} célba érkezőből – a mezőny ${Math.round(100 - pct(lastR))}%-ánál gyorsabb.</p>
       </section>`}
+      ${splitYears.length > 1 ? `<section class="card">
+        <div class="card-head"><div><h2>Úszás, kerékpár, futás trendje</h2><p id="splitNote"></p></div>
+          <div class="seg" id="splitSeg" role="tablist">
+            <button type="button" data-m="time" class="active">Idő</button>
+            <button type="button" data-m="pct">Helyezés a mezőnyben</button>
+          </div>
+        </div>
+        <div class="legend" id="splitLegend"></div>
+        <div id="splitTrend"></div>
+      </section>` : ''}
       ${splitYears.length ? `<section class="card"><div class="card-head"><div><h2>Részidők</h2><p>Úszás 3,8 km · kerékpár 180 km · futás 42,2 km, a helyezés az adott szakaszon a mezőnyben.</p></div></div>
         ${legendHtml(DISC.map((d) => ({ name: d.label, color: d.color, dot: true })))}
         <div class="split-grid">${splitYears.slice().reverse().map(splitBlock).join('')}</div></section>` : ''}
@@ -617,11 +632,79 @@
       })), { highlight: hi, labelEvery: 2, ariaLabel: `${lastR.year}. évi célidők eloszlása, kiemelve ${a.name} sávja` });
       return;
     }
+    if (splitYears.length > 1) {
+      const S3 = DISC.slice(0, 3);
+      const discRank = (r, k) => lowerBound(r.y.split[k].sorted, r[k]) + 1;
+      const discPct = (r, k) => (discRank(r, k) / r.y.split[k].sorted.length) * 100;
+      const drawSplits = (mode) => {
+        const host = document.getElementById('splitTrend');
+        observers.forEach((o) => host.querySelectorAll('.chart').forEach((c) => o.unobserve(c)));
+        hideTip();
+        if (mode === 'time') {
+          document.getElementById('splitNote').textContent =
+            'Szakaszidők évenként (feljebb = gyorsabb); a szürke vonal az adott év mezőnyének medián szakaszideje.';
+          document.getElementById('splitLegend').innerHTML = legendInner([{ name: 'Mezőny mediánja', color: 'var(--ref)' }]);
+          host.innerHTML = `<div class="split-multiples">${S3.map((d) =>
+            `<div><h3><i class="key-dot" style="background:${d.color}"></i>${d.label}</h3><div class="chart" id="st-${d.k}"></div></div>`).join('')}</div>`;
+          for (const d of S3) {
+            const rs = splitYears.filter((r) => r[d.k] != null);
+            const best = rs.reduce((b, r) => (r[d.k] < b[d.k] ? r : b), rs[0]);
+            lineChart(document.getElementById(`st-${d.k}`), {
+              kind: 'time', invert: true, height: 210,
+              series: [
+                { name: 'Mezőny mediánja', color: 'var(--ref)', dots: false, points: rs.map((r) => ({ x: r.year, y: r.y.split[d.k].median })) },
+                { name: d.label, color: d.color, points: rs.map((r) => ({ x: r.year, y: r[d.k] })) },
+              ],
+              primary: 1,
+              ariaLabel: `${a.name}: ${d.label.toLowerCase()} ideje évenként`,
+              tip: (x) => {
+                const r = rs.find((q) => q.year === x);
+                if (!r) return null;
+                const sp = r.y.split[d.k];
+                return `<div class="tt-title">${d.label} · ${x}</div>
+                  ${ttRow('Idő', fmt(r[d.k]), d.color)}
+                  ${ttRow('Helyezés', `${discRank(r, d.k)}. / ${sp.sorted.length}`)}
+                  ${ttRow('Mezőny mediánja', fmt(sp.median), 'var(--ref)')}
+                  ${r === best ? '' : ttRow('A legjobbhoz', fmtDiff(r[d.k] - best[d.k]))}`;
+              },
+              onClick: (x) => { location.hash = `#/ev/${x}`; },
+            });
+          }
+        } else {
+          document.getElementById('splitNote').textContent =
+            'Hányadik százalékban végzett az egyes szakaszokon az adott év mezőnyében (feljebb = előrébb).';
+          document.getElementById('splitLegend').innerHTML = legendInner(S3.map((d) => ({ name: d.label, color: d.color })));
+          host.innerHTML = '<div class="chart" id="st-pct"></div>';
+          lineChart(document.getElementById('st-pct'), {
+            kind: 'pct', invert: true, yDomain: [0, 100],
+            series: S3.map((d) => ({
+              name: d.label, color: d.color, endLabel: d.label.toLowerCase(),
+              points: splitYears.filter((r) => r[d.k] != null).map((r) => ({ x: r.year, y: discPct(r, d.k) })),
+            })),
+            ariaLabel: `${a.name}: helyezés szakaszonként a mezőnyben, évenként`,
+            tip: (x) => {
+              const r = splitYears.find((q) => q.year === x);
+              if (!r) return null;
+              return `<div class="tt-title">${x}</div>` + S3.map((d) =>
+                ttRow(d.label, `${fmt(r[d.k])} · ${discRank(r, d.k)}. / ${r.y.split[d.k].sorted.length}`, d.color)).join('');
+            },
+            onClick: (x) => { location.hash = `#/ev/${x}`; },
+          });
+        }
+      };
+      drawSplits('time');
+      document.getElementById('splitSeg').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        document.querySelectorAll('#splitSeg button').forEach((x) => x.classList.toggle('active', x === btn));
+        drawSplits(btn.dataset.m);
+      });
+    }
     drawTrend('time');
-    document.querySelector('.seg').addEventListener('click', (e) => {
+    document.getElementById('trendSeg').addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
-      document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('active', x === btn));
+      document.querySelectorAll('#trendSeg button').forEach((x) => x.classList.toggle('active', x === btn));
       drawTrend(btn.dataset.m);
     });
   }

@@ -9,7 +9,9 @@ Használat:
 
 Kimenet: data/evochip_<év>.json
 Csak a "Férfi Abszolút" és "Női Abszolút" szakaszokat veszi, a váltókat nem,
-és csak a helyezést kapott, célidővel rendelkező sorokat (DNF / DSQ kimarad).
+és csak a célidővel rendelkező sorokat (DNF kimarad). A célidővel, de helyezés
+nélkül szereplő sorok "ranked": false jelölést kapnak (lehet kizárás vagy
+szintidőn túli érkezés – a build_data.py dönt róluk).
 """
 import json
 import re
@@ -60,18 +62,24 @@ def main(path: str, year: int) -> None:
         rec = dict(zip(header, r))
         finish = to_sec(rec.get("Cél idő"))
         name = clean(rec.get("Név"))
-        if not isinstance(rec.get("Hely."), int) or finish is None:
+        ranked = isinstance(rec.get("Hely."), int)
+        if finish is None:
             skipped.append((name, rec.get("Cél idő")))
             continue
+        if not ranked:
+            print(f"  ! célidővel, de helyezés nélkül (megtartva, ranked=false): {name} {rec.get('Cél idő')}")
         by = rec.get("Szül.év")
         rows.append({
             "name": name,
             "birth_year": by if isinstance(by, int) and by > 1900 else None,
             "sex": sex,
-            "sex_rank": rec["Hely."],
+            "sex_rank": rec["Hely."] if ranked else None,
+            "ranked": ranked,
             "bib": rec.get("Rsz"),
             "club": clean(rec.get("Klub")),
             "country": clean(rec.get("Ország")),
+            "city": clean(rec.get("Város")),
+            "license": clean(rec.get("License")),
             "swim": to_sec(rec.get("Úszás")),
             "t1": to_sec(rec.get("Depó 1")),
             "bike": to_sec(rec.get("Bike")),
@@ -83,10 +91,7 @@ def main(path: str, year: int) -> None:
     out = ROOT / "data" / f"evochip_{year}.json"
     out.write_text(json.dumps({"year": year, "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{year}: {len(rows)} egyéni célba érkező -> {out.relative_to(ROOT)}")
-    print(f"Kihagyva (nincs helyezés vagy célidő): {len(skipped)}")
-    for n, t in skipped:
-        if to_sec(t) is not None:
-            print(f"  ! célidővel, de helyezés nélkül: {n} {t}")
+    print(f"Kihagyva (nem ért célba): {len(skipped)}")
 
 
 if __name__ == "__main__":
