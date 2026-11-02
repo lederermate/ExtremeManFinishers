@@ -17,16 +17,25 @@
   const $tt = document.getElementById('tooltip');
   const $hero = document.getElementById('hero');
 
-  /** Teljes szélességű fejlécfotó (főoldal, évek, rekordok). Fotók: extrememan.hu */
+  /** Teljes szélességű fejlécfotó (főoldal, évek, rekordok, versenyek). Fotók: extrememan.hu
+   *  A H1 a felirattal együtt kulcsszavas (pl. „eXtremeMan Nagyatád · teljes táv Finisherek”).
+   *  A build_pages.py ugyanezt a jelölést a statikus HTML-be is beleírja; ha a fotó már ott van,
+   *  csak a szöveges részt frissítjük – így betöltéskor nem ugrik el a tartalom (CLS). */
   function setHero({ img, pos = 'center 30%', eyebrow, title, lead, stats = [], compact = false }) {
-    $hero.innerHTML = `
-      <section class="hero${compact ? ' compact' : ''}">
-        <div class="hero-bg" style="background-image:url(${ROOT_PATH}images/${img});background-position:${pos}"></div>
-        <div class="hero-in">
-          <div class="hero-eyebrow">${eyebrow}</div>
-          <h1 class="hero-title">${title}</h1>
+    const inner = `
+          <h1 class="hero-h1"><span class="hero-eyebrow">${eyebrow}</span> <span class="hero-title">${title}</span></h1>
           ${lead ? `<p class="hero-lead">${lead}</p>` : ''}
-          ${stats.length ? `<div class="hero-stats">${stats.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>` : ''}
+          ${stats.length ? `<div class="hero-stats">${stats.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>` : ''}`;
+    const cur = $hero.querySelector('.hero');
+    if (cur && cur.dataset.img === img) {
+      cur.classList.toggle('compact', compact);
+      cur.querySelector('.hero-in').innerHTML = inner;
+      return;
+    }
+    $hero.innerHTML = `
+      <section class="hero${compact ? ' compact' : ''}" data-img="${img}">
+        <div class="hero-bg" style="background-image:url(${ROOT_PATH}images/${img});background-position:${pos}"></div>
+        <div class="hero-in">${inner}
         </div>
         <div class="hero-credit">Fotó: <a href="https://www.extrememan.hu/" target="_blank" rel="noopener">extrememan.hu</a></div>
       </section>`;
@@ -586,13 +595,15 @@
     const bestPos = a.res.reduce((b, r) => (pct(r) < pct(b) ? r : b));
     const splitYears = a.res.filter((r) => r.swim != null);
 
+    // első betöltéskor a statikus oldal (build_pages.py) már tartalmazza a chipeket
+    const preChips = firstRoute ? (document.getElementById('otherSummary')?.innerHTML || '') : '';
     $app.innerHTML = `
       <div class="page-head">
         <div class="eyebrow"><a href="${U.home()}">← Finisherek</a></div>
         <h1>${esc(a.name)}</h1>
         <p class="lead">${[a.by ? `Született ${a.by}` : '', a.club ? esc(a.club) : '',
           `${a.count}× célba ért ${a.first === a.last ? a.first : `${a.first} és ${a.last} között`}`].filter(Boolean).join(' · ')}</p>
-        <div class="chips" id="otherSummary"></div>
+        <div class="chips" id="otherSummary">${preChips}</div>
       </div>
       <div class="tiles">
         ${tile('Célba érések', `${a.count}×`, a.streak > 1 ? `leghosszabb sorozat: ${a.streak} év` : '')}
@@ -1166,7 +1177,7 @@
     const maxY = ys.reduce((b, y) => (y.n > b.n ? y : b));
     setHero({
       img: 'hero-uszas.jpg', pos: 'center 65%', compact: true,
-      eyebrow: `${ys[0].year} – ${ys[ys.length - 1].year}`, title: 'Évek',
+      eyebrow: `eXtremeMan Nagyatád · ${ys[0].year} – ${ys[ys.length - 1].year}`, title: 'Évek',
       lead: `${ys.length} verseny, összesen ${nf.format(M.results)} célba érés. Kattints egy évre a teljes eredménylistáért.`,
     });
     $app.innerHTML = `
@@ -1224,7 +1235,7 @@
       <div class="page-head">
         <div class="eyebrow"><a href="${U.years()}">← Évek</a></div>
         <div class="card-head" style="margin:0">
-          <h1>${year}</h1>
+          <h1><span class="h1-pre">eXtremeMan Nagyatád eredmények</span> ${year}</h1>
           <div class="pager">
             <a href="${prev ? `${U.year(prev.year)}` : '#'}" aria-disabled="${!prev}" aria-label="Előző év">← ${prev ? prev.year : ''}</a>
             <a href="${next ? `${U.year(next.year)}` : '#'}" aria-disabled="${!next}" aria-label="Következő év">${next ? next.year : ''} →</a>
@@ -1300,7 +1311,7 @@
       <span class="who"><a href="${U.athlete(a.id, a.name)}">${esc(a.name)}</a><small>${sub(a)}</small></span><span class="val">${val(a)}</span></li>`).join('')}</ol>`;
     setHero({
       img: 'hero-erem.jpg', pos: 'center 25%', compact: true,
-      eyebrow: 'Toplisták', title: 'Rekordok',
+      eyebrow: 'eXtremeMan Nagyatád · toplisták', title: 'Rekordok',
       lead: 'A leggyorsabbak, a legkitartóbbak és a leghűségesebbek a teljes távú egyéni célba érkezők között.',
     });
     $app.innerHTML = `
@@ -1499,8 +1510,7 @@
     $app.innerHTML = `
       <div class="page-head">
         <div class="eyebrow"><a href="${U.races()}">← Versenyek</a></div>
-        <h1>${esc(r.seriesName)} ${r.year}</h1>
-        <p class="lead">${esc(r.name)}</p>
+        <h1>${esc(r.seriesName)} ${r.year} <span class="h1-sub">${esc(r.name)}</span></h1>
       </div>
       <div class="tiles">
         ${tile('Célba érkezők', r.n, '')}
@@ -1547,7 +1557,7 @@
   async function renderRaces() {
     setHero({
       img: 'hero-bringa.jpg', pos: 'center 55%', compact: true,
-      eyebrow: '2015 – 2026', title: 'Versenyek',
+      eyebrow: 'eXtremeMan · 2015 – 2026', title: 'Versenyek',
       lead: 'Az összes eXtremeMan verseny az EvoChip eredményeiből: Nagyatád többi táva, Kaposvár, Gyékényes, Balatonszemes, Tab, Velence, Székesfehérvár, Nágocs.',
     });
     $app.innerHTML = loadingHtml;
@@ -1626,10 +1636,11 @@
     history.replaceState(null, '', url);
   }
 
+  let firstRoute = true; // az oldal első kirajzolása (a statikus HTML még a helyén van)
   function route() {
     resetView();
-    $hero.innerHTML = '';
     const [view, arg, arg2] = currentRoute();
+    if (!['', 'evek', 'rekordok', 'versenyek'].includes(view || '')) $hero.innerHTML = '';
     const navKey = { versenyzo: 'list', '': 'list', evek: 'years', ev: 'years', rekordok: 'records', versenyek: 'races', verseny: 'races' }[view || ''] || 'list';
     document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navKey));
     // a címek egyeznek a build_pages.py által generált statikus oldalakéval (SEO)
@@ -1646,6 +1657,7 @@
     else if (view === 'verseny') { renderRace(arg); title = document.title; }
     else { renderList(); }
     document.title = title;
+    firstRoute = false;
     if (!view && listState.scroll) { window.scrollTo(0, listState.scroll); listState.scroll = 0; }
     else if (!(view === 'versenyzo' && arg2)) window.scrollTo(0, 0);
   }

@@ -52,8 +52,33 @@ def median(vals):
     return v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2
 
 
+def huint(n: int) -> str:
+    """Mint az app.js-ben az Intl.NumberFormat('hu-HU'): 10 000-től nem törő szóközös ezres tagolás."""
+    return f"{n:,}".replace(",", "\u00a0") if n >= 10000 else str(n)
+
+
+def fit(*parts: str, limit: int = 158) -> str:
+    """A meta description részeinek összefűzése, amíg beférnek (a Google kb. 155–160 karakternél vág)."""
+    out = parts[0]
+    for x in parts[1:]:
+        if x and len(out) + 1 + len(x) <= limit:
+            out += " " + x
+    return out
+
+
+def hero(*, img: str, pos: str, eyebrow: str, title: str, lead: str = "", stats=(), compact: bool = False) -> str:
+    """Fejlécfotó – PONTOSAN az app.js setHero() jelölése, hogy betöltéskor ne ugorjon el a tartalom."""
+    st = ("<div class=\"hero-stats\">" + "".join(f"<div><b>{v}</b><span>{l}</span></div>" for v, l in stats) + "</div>") if stats else ""
+    return (f'<section class="hero{" compact" if compact else ""}" data-img="{img}">'
+            f'<div class="hero-bg" style="background-image:url(images/{img});background-position:{pos}"></div>'
+            f'<div class="hero-in"><h1 class="hero-h1"><span class="hero-eyebrow">{eyebrow}</span> <span class="hero-title">{title}</span></h1>'
+            + (f'<p class="hero-lead">{lead}</p>' if lead else "") + st + '</div>'
+            '<div class="hero-credit">Fotó: <a href="https://www.extrememan.hu/" target="_blank" rel="noopener">extrememan.hu</a></div>'
+            '</section>')
+
+
 def page(*, depth: int, title: str, description: str, canonical: str, content: str, years_html: str,
-         jsonld: list, og_type: str = "website") -> str:
+         jsonld: list, og_type: str = "website", hero_html: str = "") -> str:
     base = "../" * depth
     seo = f"""<title>{esc(title)}</title>
   <meta name="description" content="{esc(description)}">
@@ -78,6 +103,12 @@ def page(*, depth: int, title: str, description: str, canonical: str, content: s
     out = out.replace("<!--base-->", f'<base href="{base or "./"}">')
     out = re.sub(r"<!--content:start-->.*?<!--content:end-->", content, out, flags=re.S)
     out = re.sub(r"<!--years:start-->.*?<!--years:end-->", years_html, out, flags=re.S)
+    if hero_html:
+        out = out.replace('<div id="hero"></div>', f'<div id="hero">{hero_html}</div>')
+        # a fejlécfotó a legnagyobb elem (LCP) – minél korábban töltődjön
+        img = re.search(r"images/([\w.-]+\.jpg)", hero_html).group(1)
+        out = out.replace('<link rel="stylesheet" href="style.css">',
+                          f'<link rel="preload" href="images/{img}" as="image" fetchpriority="high">\n  <link rel="stylesheet" href="style.css">')
     return out
 
 
@@ -138,9 +169,15 @@ def main() -> None:
     n_fin = sum(1 for a in A.values() if a["res"])  # csak a nagyatádi teljes táv finisherei
     # ---------------- főoldal ----------------
     top = sorted(A.values(), key=lambda a: (-len(a["res"]), a["name"]))[:10]
+    home_hero = hero(
+        img="hero-cel.jpg", pos="center 30%", eyebrow="eXtremeMan Nagyatád · teljes táv", title="Finisherek",
+        lead=(f"3,8 km úszás · 180 km kerékpár · 42,2 km futás. Mindenki, aki {years[0]} óta célba ért Nagyatádon – "
+              "kattints egy névre az eredményekért és a trendgrafikonokért."),
+        stats=[(huint(n_fin), "finisher"), (huint(n_res), "célba érés"), (len(years), "verseny"),
+               (huint(len(Y[years[-1]])), f"célba érkező, {years[-1]}"),
+               (fmt(best["t"]), f'pályacsúcs · <a href="{best["a"]["path"]}">{esc(best["a"]["name"])}</a>, {best["year"]}')])
     content = f"""
     <div class="page-head">
-      <h1>eXtremeMan Nagyatád finisherek</h1>
       <p class="lead">Az eXtremeMan Nagyatád teljes távú triatlon (3,8 km úszás, 180 km kerékpár, 42,2 km futás)
         mind a {n_fin} célba érkezője {years[0]} és {years[-1]} között, összesen {n_res} célba érés.
         Pályacsúcs: {fmt(best['t'])} ({esc(best['a']['name'])}, {best['year']}).</p>
@@ -153,7 +190,7 @@ def main() -> None:
         title="eXtremeMan Nagyatád finisherek – eredmények 1990 óta",
         description=(f"Az eXtremeMan Nagyatád teljes táv mind a {n_fin} célba érkezője {years[0]}–{years[-1]}: "
                      "eredmények, részidők, helyezések és egyéni trendgrafikonok. Keress rá a nevedre!"),
-        canonical=SITE, content=content, years_html=years_html,
+        canonical=SITE, content=content, years_html=years_html, hero_html=home_hero,
         jsonld=[{
             "@context": "https://schema.org", "@type": "WebSite", "name": "eXtremeMan Nagyatád finisherek",
             "url": SITE, "inLanguage": "hu",
@@ -185,7 +222,7 @@ def main() -> None:
         content = f"""
     <div class="page-head">
       <div class="eyebrow"><a href="evek/">← Évek</a></div>
-      <h1>eXtremeMan Nagyatád {y} – eredmények</h1>
+      <h1><span class="h1-pre">eXtremeMan Nagyatád eredmények</span> {y}</h1>
       <p class="lead">{len(rs)} célba érkező a teljes távon ({rookies} először). Győztes: {esc(w['a']['name'])} ({fmt(w['t'])}),
         medián idő: {fmt(med)}.</p>
     </div>
@@ -223,7 +260,26 @@ def main() -> None:
             continue
         url = SITE + a["path"]
         club = next((r["club"] for r in reversed(res) if r["club"]), None) or next((x["club"] for x in oth if x["club"]), None)
-        other_txt = ", ".join(f"{x['race']['series_name']} {x['race']['year']}" for x in oth[:4])
+        # további versenyek sorozatonként összevonva, pl. „Balatonszemes duatlon 2024–2026 (3×)”
+        ser = {}
+        for x in oth:
+            ser.setdefault(x["race"]["series_name"], []).append(x["race"]["year"])
+        ser_items = [f"{nm} {min(ys)}" + (f"–{max(ys)}" if max(ys) != min(ys) else "") + (f" ({len(ys)}×)" if len(ys) > 1 else "")
+                     for nm, ys in sorted(ser.items(), key=lambda kv: (-len(kv[1]), -max(kv[1])))]
+
+        def ser_text(room: int) -> str:
+            """A sorozatok listája, amennyi a megadott helyre befér (legalább az első)."""
+            t = ser_items[0] if ser_items else ""
+            for it in ser_items[1:]:
+                if len(t) + 2 + len(it) <= room:
+                    t += ", " + it
+            return t
+        per = {}
+        for x in oth:
+            k = x["race"]["series"]
+            per.setdefault(k, [x["race"]["series_name"], 0])[1] += 1
+        chips = "".join(f'<button type="button" class="chip" data-scroll="s-{k}">{esc(nm)} <b>{n}×</b></button>'
+                        for k, (nm, n) in sorted(per.items(), key=lambda kv: -kv[1][1]))
         if res:
             n_core += 1
             b = min(res, key=lambda r: r["t"])
@@ -245,15 +301,27 @@ def main() -> None:
       <div class="eyebrow"><a href="./">← Finisherek</a></div>
       <h1>{esc(a['name'])}</h1>
       <p class="lead">{lead}. Legjobb ideje {fmt(b['t'])} ({b['year']}, {b['pos']}. hely).</p>
+      <div class="chips" id="otherSummary">{f'<span class="chips-label">Versenyei:</span><span class="chip chip-main">Nagyatád teljes táv <b>{len(res)}×</b></span>{chips}' if oth else ''}</div>
     </div>
     <section class="card"><h2>Nagyatád – teljes táv</h2><div class="table-wrap"><table>
       <thead><tr><th>Év</th><th class="r">Célidő</th><th class="r">Helyezés</th>{head}</tr></thead>
       <tbody>{rows}</tbody></table></div></section>{other_table(oth) if oth else ''}"""
-            times = ", ".join(f"{r['year']}: {fmt(r['t'])}" for r in reversed(res[-3:]))
             title = f"{a['name']} – eXtremeMan Nagyatád eredmények"
-            desc = (f"{a['name']} {len(res)}× teljesítette az eXtremeMan Nagyatád teljes távját ({span}). "
-                    f"Legjobb idő: {fmt(b['t'])} ({b['year']}). Eredmények: {times}."
-                    + (f" További versenyek: {other_txt}." if oth else ""))
+            d0 = (f"{a['name']} {len(res)}× teljesítette az eXtremeMan Nagyatád teljes távját ({span}). "
+                  f"Legjobb idő: {fmt(b['t'])} ({b['year']})." if len(res) > 1 else
+                  f"{a['name']} teljesítette az eXtremeMan Nagyatád teljes távját ({b['year']}): "
+                  f"{fmt(b['t'])}, {b['pos']}. hely.")
+            more = f"További versenyek: {ser_text(158 - len(d0) - 22)}." if oth else ""
+            desc = fit(d0, more)
+            if len(res) > 1:  # a legutóbbi eredmények, amennyi még befér
+                t = ""
+                for r in reversed(res[-3:]):
+                    nxt = (t + ", " if t else "") + f"{r['year']}: {fmt(r['t'])}"
+                    if len(desc) + len(" Eredmények: ") + len(nxt) + 1 > 158:
+                        break
+                    t = nxt
+                if t:
+                    desc += f" Eredmények: {t}."
             crumb = ("Finisherek", SITE)
         else:
             n_side += 1
@@ -269,7 +337,8 @@ def main() -> None:
       <p class="lead">{lead}.</p>
     </div>{other_table(oth)}"""
             title = f"{a['name']} – eXtremeMan eredmények"
-            desc = f"{a['name']} eXtremeMan eredményei ({span}): {other_txt}. Idők, helyezések, részidők."
+            head = f"{a['name']} eXtremeMan eredményei ({span}):"
+            desc = fit(f"{head} {ser_text(146 - len(head))}.", "Idők, helyezések, részidők.")
             crumb = ("Versenyek", SITE + "versenyek/")
         out = ROOT / a["path"] / "index.html"
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -296,8 +365,8 @@ def main() -> None:
         content = f"""
     <div class="page-head">
       <div class="eyebrow"><a href="versenyek/">← Versenyek</a></div>
-      <h1>{esc(rc['series_name'])} {rc['year']}</h1>
-      <p class="lead">{esc(rc['name'])} · {rc['n']} célba érkező{f" · győztes: {esc(w['a']['name'])} ({fmt(w['t'])})" if w else ''}.</p>
+      <h1>{esc(rc['series_name'])} {rc['year']} <span class="h1-sub">{esc(rc['name'])}</span></h1>
+      <p class="lead">{rc['n']} célba érkező{f" · győztes: {esc(w['a']['name'])} ({fmt(w['t'])})" if w else ''}.</p>
     </div>
     <section class="card"><div class="table-wrap"><table>
       <thead><tr><th class="r">Hely</th><th>Név</th><th>Klub</th>{head}<th class="r">Célidő</th></tr></thead>
@@ -332,8 +401,11 @@ def main() -> None:
                      "Balatonszemes triatlon és duatlon, Tab, Velence, Székesfehérvár, Nágocs."),
         canonical=SITE + "versenyek/",
         content=f"""
-    <div class="page-head"><h1>eXtremeMan versenyek</h1>
+    <div class="page-head">
       <p class="lead">{len(RACES)} verseny, {sum(rc['n'] for rc in RACES)} célba érkezés 2015 óta.</p></div>{blocks}""",
+        hero_html=hero(img="hero-bringa.jpg", pos="center 55%", compact=True, eyebrow="eXtremeMan · 2015 – 2026", title="Versenyek",
+                       lead="Az összes eXtremeMan verseny az EvoChip eredményeiből: Nagyatád többi táva, Kaposvár, Gyékényes, "
+                            "Balatonszemes, Tab, Velence, Székesfehérvár, Nágocs."),
         years_html=years_html, jsonld=[crumbs(("Finisherek", SITE), ("Versenyek", SITE + "versenyek/"))],
     ), encoding="utf-8")
     urls.append((SITE + "versenyek/", "0.7"))
@@ -350,11 +422,13 @@ def main() -> None:
         description=f"Az eXtremeMan Nagyatád teljes táv évenként {years[0]}–{years[-1]}: célba érkezők száma, győztesek, győztes és medián idők.",
         canonical=SITE + "evek/", years_html=years_html,
         content=f"""
-    <div class="page-head"><h1>Évek</h1><p class="lead">{len(years)} verseny, {n_res} célba érés.</p></div>
+    <div class="page-head"><p class="lead">{len(years)} verseny, {n_res} célba érés.</p></div>
     <section class="card"><div class="table-wrap"><table>
       <thead><tr><th>Év</th><th class="r">Célba érkezők</th><th>Győztes</th><th class="r">Győztes idő</th><th class="r">Medián</th></tr></thead>
       <tbody>{yrows}</tbody></table></div></section>""",
         jsonld=[crumbs(("Finisherek", SITE), ("Évek", SITE + "evek/"))],
+        hero_html=hero(img="hero-uszas.jpg", pos="center 65%", compact=True, eyebrow=f"eXtremeMan Nagyatád · {years[0]} – {years[-1]}",
+                       title="Évek", lead=f"{len(years)} verseny, összesen {huint(n_res)} célba érés. Kattints egy évre a teljes eredménylistáért."),
     ), encoding="utf-8")
     urls.append((SITE + "evek/", "0.7"))
 
@@ -370,12 +444,13 @@ def main() -> None:
         description="eXtremeMan Nagyatád toplisták: leggyorsabb egyéni idők, legtöbb célba érés, leghosszabb sorozat.",
         canonical=SITE + "rekordok/", years_html=years_html,
         content=f"""
-    <div class="page-head"><h1>Rekordok</h1></div>
     <div class="grid-2">
       <section class="card"><h2>Leggyorsabb egyéni idők</h2><ol class="rank-list">{li(fastest, lambda a: fmt(min(r["t"] for r in a["res"])))}</ol></section>
       <section class="card"><h2>Legtöbb célba érés</h2><ol class="rank-list">{li(most, lambda a: f"{len(a['res'])}×")}</ol></section>
     </div>""",
         jsonld=[crumbs(("Finisherek", SITE), ("Rekordok", SITE + "rekordok/"))],
+        hero_html=hero(img="hero-erem.jpg", pos="center 25%", compact=True, eyebrow="eXtremeMan Nagyatád · toplisták", title="Rekordok",
+                       lead="A leggyorsabbak, a legkitartóbbak és a leghűségesebbek a teljes távú egyéni célba érkezők között."),
     ), encoding="utf-8")
     urls.append((SITE + "rekordok/", "0.7"))
     urls.append((SITE + "adatvedelem.html", "0.3"))  # scripts/build_adatvedelem.py generálja
