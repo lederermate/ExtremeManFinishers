@@ -252,6 +252,66 @@ def fix_lap_gaps(points):
             prev = n
 
 
+STD_TOTAL = {"swim": [0.75, 1.5, 1.9, 3.8], "bike": [20, 40, 45, 60, 80, 90, 120, 180],
+             "run": [5, 7.5, 10, 21.1, 42.2], "kayak": [10, 20]}
+
+
+def insert_hidden_points(lp):
+    """Rejtett mérőpontok: az EvoChip egyéni oldala néha nem listáz egy mérőpontot (pl. a
+    kerékpár célját), de a következő pont köridője (index 1) csak az utolsó, meg nem
+    jelenített mérés óta számít (pl. "Depó 2" = 7 perc, miközben 40 perc telt el). Ha ez a
+    mezőny többségénél így van, a hiányzó pontot visszaállítjuk (összidő − köridő).
+    Csak depó előtt (máshol, pl. a régi kaposvári versenyeken a köridő mást jelent).
+    Visszaadja a beszúrt pontok indexét (a km-t később, a normalizálás után töltjük ki)."""
+    P, A = lp["points"], lp["athletes"]
+    added, i = [], 1
+    while i < len(P):
+        hid = tot = 0
+        for a in A.values():
+            if i < len(a) and a[i] and a[i - 1] and a[i][0] is not None and a[i - 1][0] is not None \
+                    and a[i][1] is not None:
+                tot += 1
+                hid += a[i][1] > 0 and a[i][1] < (a[i][0] - a[i - 1][0]) - 30
+        if tot >= 3 and hid > tot / 2 and P[i - 1]["disc"] in STD_TOTAL and P[i]["disc"] == "tr":
+            prev = P[i - 1]
+            name = {"swim": "Úszás", "bike": "Kerékpár", "run": "Futás", "kayak": "Kajak"}[prev["disc"]]
+            P.insert(i, {"label": f"{name} (vége)", "disc": prev["disc"], "km": None})
+            for a in A.values():
+                if i > len(a):
+                    continue
+                cur = a[i] if i < len(a) else None
+                ok = cur and cur[0] is not None and cur[1] and a[i - 1] and a[i - 1][0] is not None \
+                    and a[i - 1][0] < cur[0] - cur[1] < cur[0]
+                a.insert(i, [cur[0] - cur[1], None, None] if ok else [None, None, None])
+            added.append(i)
+            i += 1
+        i += 1
+    return added
+
+
+def fill_hidden_km(points, athletes, added):
+    """A beszúrt pont távja: a szakasz addigi medián tempójával becsülve, majd ha egy
+    szokásos össztávhoz (pl. 90 km) közel esik, arra kerekítve."""
+    def med_seg(i):
+        v = sorted(a[i][0] - a[i - 1][0] for a in athletes.values()
+                   if i < len(a) and a[i] and a[i - 1] and a[i][0] is not None and a[i - 1][0] is not None
+                   and a[i][0] > a[i - 1][0])
+        return v[len(v) // 2] if v else None
+    for i in added:
+        disc = points[i]["disc"]
+        idx = [j for j in range(i) if points[j]["disc"] == disc and points[j]["km"]]
+        t_new = med_seg(i)
+        km_prev = sum(points[j]["km"] for j in idx)
+        t_prev = [med_seg(j) for j in idx if j > 0]
+        if not idx or not t_new or None in t_prev or not t_prev:
+            continue
+        speed = sum(points[j]["km"] for j in idx if j > 0) / sum(t_prev)
+        est = speed * t_new
+        total = km_prev + est
+        snap = [s for s in STD_TOTAL[disc] if abs(s - total) < total * 0.08 and s > km_prev]
+        points[i]["km"] = round((min(snap, key=lambda s: abs(s - total)) - km_prev) if snap else est, 2)
+
+
 # Kézi távjavítások (az EvoChip hibás adata): kulcs -> {mérőpont index: szakasz km}
 KM_FIX = {
     "2024-balatonszemes-duatlon-itt": {1: 10.0},  # 3 × 10 km-es kör (ITT30), a 2. kör távja hibásan 3
@@ -851,13 +911,17 @@ def main() -> None:
     for old in other_dir.glob("*.json"):
         old.unlink()
     race_lap_sql, n_other = [], 0
-    have = set()
+    have, hidden_log = set(), []
     for f in sorted((DATA / "laps_other").glob("*.json")) if (DATA / "laps_other").exists() else []:
         lp = json.loads(f.read_text(encoding="utf-8"))
         rkey = lp["key"]
         if rkey not in rr_by_bib or not lp["points"]:
             continue
+        added = insert_hidden_points(lp)
         normalize_points_generic(lp["points"], lp["athletes"], rkey)
+        fill_hidden_km(lp["points"], lp["athletes"], added)
+        if added:
+            hidden_log.append(f"{rkey}: " + ", ".join(f"{lp['points'][i]['label']} {lp['points'][i]['km']} km" for i in added))
         fix_lap_gaps(lp["points"])
         med = []
         for i in range(len(lp["points"])):
@@ -908,6 +972,8 @@ def main() -> None:
         body.append("commit;")
         (ROOT / "supabase" / fname).write_text("\n".join(body) + "\n", encoding="utf-8")
     print(f"További versenyek köztes mérőpontjai: {len(have)} verseny, {n_other} versenyző")
+    print(f"Rejtett mérőpontok visszaállítva: {len(hidden_log)} versenyben")
+    (DATA / "hidden_points.txt").write_text("\n".join(hidden_log) + "\n", encoding="utf-8")
     # a versenylistában jelöljük, melyikhez van köridő
     oth = json.loads((DATA / "other.json").read_text(encoding="utf-8"))
     for rc in oth["races"]:
