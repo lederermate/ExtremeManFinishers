@@ -56,11 +56,23 @@ def strip_year(name: str) -> str:
     return re.sub(r"\s*\(\d{4}\)\s*$", "", name).strip()
 
 
+TITLE_TOKEN = re.compile(r"(dr|prof|ifj|id)\.?", re.I)
+
+
 def key(name: str) -> str:
-    n = strip_year(name)
-    n = re.sub(r"^((dr|prof|ifj|id)\.?\s+)+", "", n.strip(), flags=re.I)
-    n = re.sub(r"[\s\-]+", " ", n).strip().casefold()
-    return n
+    """Név kulcs: kisbetűs, a címek ("dr.", "Dr.", "ifj.") bárhol elhagyva – az EvoChip
+    és az extremetour máshová teszi őket: "Herr Gyula dr.", "Dr.Herr Gyula", "Gyula Dr. Herr"."""
+    n = strip_year(name).strip()
+    n = re.sub(r"\b(dr|prof|ifj|id)\.(?=\S)", r"\1. ", n, flags=re.I)  # "Dr.Herr" -> "Dr. Herr"
+    n = re.sub(r"[\s\-]+", " ", n)
+    n = " ".join(t for t in n.split(" ") if t and not TITLE_TOKEN.fullmatch(t))
+    return n.casefold()
+
+
+def ident_key(name: str) -> str:
+    """Sorrendfüggetlen kulcs (az EvoChip néha "Utónév Vezetéknév" sorrendben ír) – csak
+    születési évvel együtt használjuk."""
+    return " ".join(sorted(tokens(name)))
 
 
 def loose_key(name: str) -> str:
@@ -463,7 +475,91 @@ def norm_lic(lic):
     return m.group(1) if m else None
 
 
+class IdBook:
+    """Állandó azonosítók az új (nem extremetour) versenyzőknek: data/ids.json
+    ("név kulcs|szül. év" -> azonosító). Így egy újraépítés (pl. új verseny, javított
+    párosítás) nem tolja el a többiek azonosítóját, és a linkjeik megmaradnak."""
+
+    def __init__(self, path):
+        self.path = path
+        self.map = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        self.used = set()
+
+    def get(self, name, by, start):
+        """Azonosító név + szül. év szerint. Azonos kulcsú (névrokon) versenyzők: "kulcs#2", "#3"..."""
+        k = f"{ident_key(name)}|{by or ''}"
+        lo, hi = start, start + 99999
+
+        def free(kk):
+            v = self.map.get(kk)
+            return v if v is not None and v not in self.used and lo <= v <= hi else None
+
+        def variants(kk):
+            n, out = 1, []
+            while (kk if n == 1 else f"{kk}#{n}") in self.map:
+                out.append(kk if n == 1 else f"{kk}#{n}")
+                n += 1
+            return out, (kk if n == 1 else f"{kk}#{n}")
+
+        found, nxt = variants(k)
+        i = next((free(kk) for kk in found if free(kk) is not None), None)
+        if i is None and not found:  # születési év nélkül, ill. korábban év nélkül – csak egyértelmű esetben
+            base = k.split("|")[0] + "|"
+            alt = {free(kk) for kk in self.map if (kk.split("#")[0] == base if by else kk.startswith(base))} - {None}
+            i = alt.pop() if len(alt) == 1 else None
+        if i is None:
+            taken = [v for v in self.map.values() if lo <= v <= hi] + [v for v in self.used if lo <= v <= hi]
+            i = max(taken + [start - 1]) + 1
+            self.map[nxt] = i
+        self.used.add(i)
+        return i
+
+    def save(self):
+        self.path.write_text(json.dumps(dict(sorted(self.map.items(), key=lambda kv: kv[1])), ensure_ascii=False, indent=0),
+                             encoding="utf-8")
+
+
+def result_signatures():
+    """versenyző id -> {eredmény-azonosítók} a jelenlegi (előző futásból származó) kimenetből."""
+    sig, names = defaultdict(set), {}
+    try:
+        fo = json.loads((DATA / "finishers.json").read_text(encoding="utf-8"))
+        ot = json.loads((DATA / "other.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return sig, names
+    for a in fo["athletes"] + ot["athletes"]:
+        names[a[0]] = a[1]
+    for r in fo["results"]:
+        sig[r[0]].add(("core", r[1], r[3]))
+    for r in ot["results"]:
+        sig[r[1]].add((ot["races"][r[0]][0], r[4]))
+    return sig, names
+
+
+def update_redirects(old_sig, old_names):
+    """Megszűnt azonosítók (pl. két adatlap összevonása) -> data/redirects.json, hogy a régi
+    linkek az új adatlapra vigyenek (a build_pages.py átirányító oldalakat készít)."""
+    new_sig, new_names = result_signatures()
+    owner = {x: i for i, s in new_sig.items() for x in s}
+    path = DATA / "redirects.json"
+    rd = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    added = 0
+    for oid, s in old_sig.items():
+        if oid in new_names:
+            continue
+        tgt = {owner.get(x) for x in s} - {None}
+        if len(tgt) == 1:
+            rd[str(oid)] = [tgt.pop(), old_names.get(oid, "")]
+            added += 1
+    path.write_text(json.dumps(dict(sorted(rd.items(), key=lambda kv: int(kv[0]))), ensure_ascii=False, indent=0),
+                    encoding="utf-8")
+    if added:
+        print(f"Átirányítás megszűnt azonosítókról: +{added} (data/redirects.json)")
+
+
 def main() -> None:
+    old_sig, old_names = result_signatures()
+    idbook = IdBook(DATA / "ids.json")
     et = json.loads((DATA / "extremetour.json").read_text(encoding="utf-8"))
     overrides_path = DATA / "overrides.json"
     overrides = json.loads(overrides_path.read_text(encoding="utf-8")) if overrides_path.exists() else {}
@@ -495,7 +591,7 @@ def main() -> None:
 
     def remember(aid, row):
         if row.get("birth_year"):
-            ident_name[(loose_key(row["name"]), row["birth_year"])].add(aid)
+            ident_name[(ident_key(row["name"]), row["birth_year"])].add(aid)
         lic = norm_lic(row.get("license"))
         if lic:
             ident_lic[lic].add(aid)
@@ -635,6 +731,9 @@ def main() -> None:
     by_key = defaultdict(list)
     for a in athletes.values():
         by_key[key(a["source_name"])].append(a)
+    core_by_tok = defaultdict(list)  # extremetour (nagyatádi) versenyzők, sorrendfüggetlen név szerint
+    for a in athletes.values():
+        core_by_tok[ident_key(a["source_name"])].append(a)
 
     last_year = defaultdict(int)
     first_year = defaultdict(lambda: 9999)
@@ -652,8 +751,15 @@ def main() -> None:
     #    Párosítás: licencszám -> EvoChip név + szül. év -> extremetour név + szül. év
     #    -> különben új versenyző (200001-től).
     # ------------------------------------------------------------------
-    side_next = SIDE_ID_START
     races, race_results = [], []
+    # a további versenyeken egy névhez előforduló születési évek (az év nélküli nagyatádi
+    # versenyzők párosításához: csak ha egyetlen lehetséges születési év van)
+    side_years = defaultdict(set)
+    for f in sorted((DATA / "races").glob("2*.json")) if (DATA / "races").exists() else []:
+        rc = json.loads(f.read_text(encoding="utf-8"))
+        for r in rc["rows"]:
+            if r["birth_year"] and rc["year"] - r["birth_year"] >= 16:
+                side_years[ident_key(r["name"])].add(r["birth_year"])
     side_stats = defaultdict(int)
     for f in sorted((DATA / "races").glob("2*.json")) if (DATA / "races").exists() else []:
         rc = json.loads(f.read_text(encoding="utf-8"))
@@ -672,16 +778,23 @@ def main() -> None:
             if len(ids) == 1:
                 aid, how = next(iter(ids)), "licenc"
             else:
-                ids = (ident_name.get((loose_key(row["name"]), by), set()) if by else set()) - taken
+                ids = (ident_name.get((ident_key(row["name"]), by), set()) if by else set()) - taken
                 if len(ids) == 1:
                     aid, how = next(iter(ids)), "név+év"
                 else:
-                    cands = [c for c in by_key.get(key(row["name"]), []) if c["id"] not in taken and by and c["birth_year"] == by]
+                    all_c = core_by_tok.get(ident_key(row["name"]), [])
+                    cands = [c for c in all_c if c["id"] not in taken and by and c["birth_year"] == by]
                     if len(cands) == 1:
                         aid, how = cands[0]["id"], "extremetour név+év"
+                    elif len(all_c) == 1 and all_c[0]["birth_year"] is None and all_c[0]["id"] not in taken \
+                            and by and {y for y in side_years[ident_key(row["name"])]
+                                        if first_year[all_c[0]["id"]] >= y + 16} == {by} \
+                            and not ident_name.get((ident_key(row["name"]), by)):
+                        # születési év nélküli (EvoChip előtti) nagyatádi versenyző: egyedi név
+                        # és lehetséges életkor esetén ő az (pl. "Dr. Herr Gyula" 1965 = #974)
+                        aid, how = all_c[0]["id"], "extremetour név (év nélkül)"
             if aid is None:
-                aid, how = side_next, "új"
-                side_next += 1
+                aid, how = idbook.get(row["name"], by, SIDE_ID_START), "új"
                 athletes[aid] = {"id": aid, "name": row["name"], "birth_year": by, "sex": row["sex"], "source_name": row["name"]}
                 by_key[key(row["name"])].append(athletes[aid])
             else:
@@ -697,6 +810,14 @@ def main() -> None:
         races.append({"key": rc["key"], "year": rc["year"], "series": rc["series"], "series_name": rc["series_name"],
                       "name": rc["name"], "seg_labels": rc["seg_labels"], "n": len(rows),
                       "best": ts[0] if ts else None, "median": sorted(ts)[len(ts) // 2] if ts else None})
+    # a csak további versenyeken szereplők megjelenő neve: a legutóbbi versenyen használt alak
+    # (az EvoChip régebben gyakran "Utónév Vezetéknév" sorrendben írt)
+    latest = {}
+    for rr in race_results:
+        if rr["athlete_id"] >= SIDE_ID_START and rr["year"] >= latest.get(rr["athlete_id"], (0, ""))[0]:
+            latest[rr["athlete_id"]] = (rr["year"], rr["row_name"])
+    for aid, (_, nm) in latest.items():
+        athletes[aid]["name"] = nm if nm != nm.lower() else nm.title()
     if races:
         print(f"További versenyek: {len(races)} verseny, {len(race_results)} eredmény; párosítás: "
               + ", ".join(f"{k}: {v}" for k, v in sorted(side_stats.items())))
@@ -704,7 +825,6 @@ def main() -> None:
     # ------------------------------------------------------------------
     # B) ÚJ ÉVEK
     # ------------------------------------------------------------------
-    next_id = NEW_ID_START
     for year in sorted(y for y in evo if y not in et_years):
         ov = overrides.get(str(year), {})
         stats = defaultdict(int)
@@ -717,7 +837,7 @@ def main() -> None:
         def find(row):
             name, by = row["name"], row["birth_year"]
             # 2. EvoChip-identitás: név + szül. év egy korábbi EvoChip évből
-            ids = (ident_name.get((loose_key(name), by), set()) if by else set()) - taken
+            ids = (ident_name.get((ident_key(name), by), set()) if by else set()) - taken
             if len(ids) == 1:
                 return athletes[next(iter(ids))], "EvoChip név+év"
             # 3. extremetour név (csak életkor szerint lehetséges jelöltek: aki a
@@ -768,8 +888,7 @@ def main() -> None:
             name, by = row["name"], row["birth_year"]
             match, how = assign[pos - 1]
             if match is None:
-                aid = next_id
-                next_id += 1
+                aid = idbook.get(name, by, NEW_ID_START)
                 athletes[aid] = {"id": aid, "name": name, "birth_year": by, "sex": row["sex"], "source_name": name}
                 stats["kézi (új)" if how == "kézi" else ("KÉTES" if how == "KÉTES" else "új")] += 1
                 if how == "KÉTES":
@@ -1045,6 +1164,8 @@ def main() -> None:
     write_anomalies(athletes, results, race_results, races, lap_flags)
     print(f"Összesen: {len(athletes)} versenyző, {len(results)} eredmény "
           f"({sum(1 for r in results if r.get('swim') is not None)} részidővel)")
+    idbook.save()
+    update_redirects(old_sig, old_names)
     print("Kimenet: supabase/seed.sql, data/finishers.json, data/match_report.txt")
 
 

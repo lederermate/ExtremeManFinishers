@@ -379,6 +379,27 @@ def main() -> None:
     ), encoding="utf-8")
     urls.append((SITE + "rekordok/", "0.7"))
 
+    # ---------------- átirányítások: megszűnt (összevont) versenyzői azonosítók ----------------
+    # data/redirects.json: {"régi id": [új id, régi név]} – a régi link az új adatlapra visz
+    rd_path = ROOT / "data" / "redirects.json"
+    rd = json.loads(rd_path.read_text(encoding="utf-8")) if rd_path.exists() else {}
+    n_rd = 0
+    for old_id, (new_id, old_name) in rd.items():
+        while str(new_id) in rd and str(new_id) != old_id and int(new_id) not in A:  # láncolt átirányítás
+            new_id = rd[str(new_id)][0]
+        tgt = A.get(int(new_id))
+        if not tgt or int(old_id) in A:
+            continue
+        url = SITE + tgt["path"]
+        stub = (f'<!doctype html><html lang="hu"><head><meta charset="utf-8"><title>{html.escape(tgt["name"])}</title>'
+                f'<meta name="robots" content="noindex"><link rel="canonical" href="{url}">'
+                f'<meta http-equiv="refresh" content="0; url={url}"></head>'
+                f'<body><p>Az adatlap új címe: <a href="{url}">{html.escape(tgt["name"])}</a></p></body></html>\n')
+        d_ = ROOT / f"versenyzo/{old_id}-{slug(old_name)}"
+        d_.mkdir(parents=True, exist_ok=True)
+        (d_ / "index.html").write_text(stub, encoding="utf-8")
+        n_rd += 1
+
     # ---------------- 404.html: ismeretlen cím esetén is az app töltődik be ----------------
     from urllib.parse import urlparse
     nf = page(depth=0, title="eXtremeMan Nagyatád finisherek", description="Az oldal nem található.",
@@ -394,7 +415,7 @@ def main() -> None:
     sm.append("</urlset>")
     (ROOT / "sitemap.xml").write_text("\n".join(sm) + "\n", encoding="utf-8")
     print(f"Kész: index.html, {len(years)} év-oldal, {n_core} nagyatádi + {n_side} további versenyző-oldal, "
-          f"{len(RACES)} versenyoldal, sitemap.xml ({len(urls)} URL)")
+          f"{len(RACES)} versenyoldal, {n_rd} átirányítás, sitemap.xml ({len(urls)} URL)")
 
 
 if __name__ == "__main__":

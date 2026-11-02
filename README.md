@@ -36,6 +36,8 @@ https://lederermate.github.io/ExtremeManFinishers/
 | `data/extremetour.json` | az extremetour.hu-ról letöltött nyers adatok (1990–2025) |
 | `data/evochip_<év>.json`, `sources/evochip/` | az EvoChip exportok (2022–2026) és a kinyert adatok |
 | `data/overrides.json` | kézi névpárosítások |
+| `data/ids.json` | az új (nem extremetour) versenyzők állandó azonosítói (név + szül. év) – így a linkjük nem változik |
+| `data/redirects.json` | megszűnt (összevont) azonosítók → új adatlap; a régi linkekhez átirányító oldal készül |
 | `data/match_report.txt` | a párosítás naplója (EvoChip ↔ extremetour) |
 
 ## Beüzemelés
@@ -131,6 +133,11 @@ Ha a `schema.sql` változott, előbb azt (többször is futtatható).
   egy korábbi évből → egyértelmű extremetour névegyezés → névrészlet + szül. év.
   Ha egyik sem egyértelmű, új versenyzőként kerül be, és a `data/match_report.txt`-ben
   **KÉTES** jelölést kap.
+- A nevekben a címek („dr.”) bárhol állhatnak, és az EvoChip néha fordított sorrendben
+  írja a nevet („Gyula Herr”) – a párosítás ezt figyelmen kívül hagyja. Születési év nélküli
+  (EvoChip előtti) nagyatádi versenyzőhöz akkor kapcsolódik egy további verseny, ha a név
+  egyedi és a további versenyeken csak egy, életkor szerint lehetséges születési év tartozik
+  hozzá (pl. Herr Gyula dr. = „Dr. Herr Gyula” 1965).
 - Célidővel, de helyezés nélkül szereplő versenyzők (pl. időbüntetés) beszámítanak –
   az extremetour.hu is így számol (2023: Bars Tamás).
 
