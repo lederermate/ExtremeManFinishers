@@ -1705,6 +1705,33 @@
     history.replaceState(null, '', url);
   }
 
+  /* Látogatásszámláló (supabase/schema.sql: track_view). Süti, localStorage és személyes adat nélkül:
+   * csak az oldal útvonala megy el (pl. /versenyzo/123), az adatbázis naponta összesíti.
+   * „Látogatás” = az oldalra kívülről érkezett (nem belső link, nem frissítés / vissza gomb). */
+  let tracked = { key: '', at: 0, first: true };
+  function trackView(view, arg) {
+    try {
+      if (!(CFG.supabaseUrl && CFG.supabaseKey)) return;
+      if (navigator.webdriver || /bot|crawl|spider|slurp|preview|lighthouse|headless/i.test(navigator.userAgent)) return;
+      if (!/^https?:$/.test(location.protocol) || /^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(location.hostname)) return;
+      const path = view ? (arg ? `/${view}/${arg}` : `/${view}`) : '/';
+      if (!/^\/(evek|rekordok|versenyek|ev\/\d{4}|versenyzo\/\d{1,6}|verseny\/[a-z0-9-]{1,100})?$/.test(path)) return;
+      const now = Date.now();
+      if (path === tracked.key && now - tracked.at < 3000) return; // ugyanaz a kirajzolás kétszer
+      let entry = false;
+      if (tracked.first) {
+        const nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+        const internal = document.referrer && document.referrer.startsWith(location.origin + ROOT_PATH);
+        entry = !internal && !(nav && (nav.type === 'reload' || nav.type === 'back_forward'));
+      }
+      tracked = { key: path, at: now, first: false };
+      fetch(rpcUrl('track_view'), {
+        method: 'POST', headers: rpcHeaders(), keepalive: true,
+        body: JSON.stringify({ p_path: path, p_entry: entry }),
+      }).catch(() => { /* a számláló hibája nem érinti az oldalt */ });
+    } catch (e) { /* nem baj */ }
+  }
+
   let firstRoute = true; // az oldal első kirajzolása (a statikus HTML még a helyén van)
   function route() {
     resetView();
@@ -1727,6 +1754,7 @@
     else { renderList(); }
     document.title = title;
     firstRoute = false;
+    trackView(view, view === 'versenyzo' || view === 'ev' || view === 'verseny' ? arg : '');
     if (!view && listState.scroll) { window.scrollTo(0, listState.scroll); listState.scroll = 0; }
     else if (!(view === 'versenyzo' && arg2)) window.scrollTo(0, 0);
   }

@@ -263,3 +263,82 @@ as $$
 $$;
 revoke all on function public.race_lap_data(text) from public;
 grant execute on function public.race_lap_data(text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Látogatásszámláló – süti és személyes adat nélkül.
+--
+-- Csak oldalanként, naponta összesített darabszámot tárolunk: nincs IP-cím,
+-- böngésző-azonosító, süti vagy bármi, ami egy látogatóhoz köthető.
+--   views  = megtekintések (minden oldalmegnyitás / belső navigáció)
+--   visits = látogatások: az oldalra kívülről érkezett (nem belső link,
+--            nem frissítés) – ez közelítőleg a látogatások száma.
+-- A böngésző a táblát nem éri el: csak a track_view() függvényt hívhatja
+-- (egy számlálót növel), az összesítést a page_view_stats() adja vissza
+-- (statisztika/ oldal).
+-- ---------------------------------------------------------------------
+create table if not exists public.page_views (
+  day    date    not null,
+  path   text    not null check (char_length(path) between 1 and 120),
+  views  integer not null default 0,
+  visits integer not null default 0,
+  primary key (day, path)
+);
+alter table public.page_views enable row level security;
+revoke all on public.page_views from anon, authenticated;
+
+create or replace function public.track_view(p_path text, p_entry boolean default false)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+begin
+  -- csak az oldal valódi útvonalai (így a táblát nem lehet tetszőleges szöveggel teleírni)
+  if p_path is null or p_path !~ '^/(evek|rekordok|versenyek|ev/[0-9]{4}|versenyzo/[0-9]{1,6}|verseny/[a-z0-9-]{1,100})?$' then
+    return;
+  end if;
+  insert into public.page_views as v (day, path, views, visits)
+  values ((now() at time zone 'Europe/Budapest')::date, p_path, 1, case when p_entry then 1 else 0 end)
+  on conflict (day, path) do update
+    set views = v.views + 1, visits = v.visits + excluded.visits;
+end;
+$$;
+revoke all on function public.track_view(text, boolean) from public;
+grant execute on function public.track_view(text, boolean) to anon, authenticated;
+
+-- Összesítés a statisztika/ oldalnak: összesen, napi bontás az utolsó p_days napra,
+-- és a legnézettebb oldalak ugyanebben az időszakban.
+create or replace function public.page_view_stats(p_days integer default 30)
+returns json
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with p as (
+    select least(greatest(coalesce(p_days, 30), 1), 366) as n,
+           (now() at time zone 'Europe/Budapest')::date as today
+  ),
+  per_day as (
+    select day, sum(views)::int as views, sum(visits)::int as visits from public.page_views group by day
+  )
+  select json_build_object(
+    'today', (select today from p),
+    'days',  (select n from p),
+    'total', (select json_build_object('views', coalesce(sum(views), 0), 'visits', coalesce(sum(visits), 0), 'since', min(day))
+              from public.page_views),
+    'daily', (select json_agg(json_build_array(p.today - i, coalesce(d.views, 0), coalesce(d.visits, 0)) order by i desc)
+              from p cross join generate_series(0, p.n - 1) i
+              left join per_day d on d.day = p.today - i),
+    'top',   (select coalesce(json_agg(json_build_array(t.path, t.views, t.visits)), '[]'::json) from (
+                select v.path, sum(v.views)::int as views, sum(v.visits)::int as visits
+                from public.page_views v, p
+                where v.day > p.today - p.n
+                group by v.path
+                order by 2 desc, 1
+                limit 100) t)
+  );
+$$;
+revoke all on function public.page_view_stats(integer) from public;
+grant execute on function public.page_view_stats(integer) to anon, authenticated;

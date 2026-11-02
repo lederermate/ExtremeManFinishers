@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../">
+  <title>Látogatottság – eXtremeMan Nagyatád finisherek</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#e10600">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <style>
+    .views-chart svg { display: block; width: 100%; height: 220px; overflow: visible; }
+    .views-chart .grid { stroke: var(--grid); stroke-width: 1; }
+    .views-chart .base { stroke: var(--axis); stroke-width: 1; }
+    .views-chart .tick { fill: var(--muted); font: 12px 'Source Sans 3', system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+    .views-chart .bar { fill: var(--accent); pointer-events: none; }
+    .views-chart .hit { fill: transparent; cursor: default; }
+    .views-chart .hit:hover + .bar, .views-chart .bar.on { fill: var(--accent-ink); }
+    .stat-path { color: var(--muted); font-size: 12px; margin-left: 6px; }
+    td.name { white-space: normal; min-width: 180px; }
+    @media (max-width: 600px) { .stat-path { display: none; } td.name { min-width: 0; } th, td { padding-left: 6px; padding-right: 6px; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 52 L26 14 L36 34 L44 24 L58 52 Z"/></svg>
+        <span><b>eXtremeMan</b> Nagyatád <em>finisherek</em></span>
+      </a>
+      <nav class="nav" aria-label="Fő menü">
+        <a href="./">Finisherek</a>
+        <a href="evek/">Évek</a>
+        <a href="rekordok/">Rekordok</a>
+        <a href="versenyek/">Versenyek</a>
+      </nav>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Világos / sötét téma váltása" title="Téma váltása">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="app" class="wrap" tabindex="-1">
+    <div class="page-head">
+      <div class="eyebrow"><a href="./">← Finisherek</a></div>
+      <h1>Látogatottság</h1>
+      <p class="lead">Hányan nézték meg az oldalt. Süti és személyes adat nélkül mérjük: csak oldalanként, naponta
+        összesített darabszám van (<a href="adatvedelem.html">részletek</a>).
+        <b>Megtekintés</b> = minden oldalmegnyitás; <b>látogatás</b> = valaki kívülről érkezett az oldalra.</p>
+    </div>
+    <div id="stats"><div class="loading" role="status"><span class="spinner"></span> Adatok betöltése…</div></div>
+  </main>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+
+  <footer class="footer">
+    <div class="wrap"><p><a href="./">Vissza a finisherekhez</a> · <a href="adatvedelem.html">Adatvédelem és források</a></p></div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script>
+  (() => {
+    const CFG = window.FINISHERS_CONFIG || {};
+    const $stats = document.getElementById('stats');
+    const $tip = document.getElementById('tooltip');
+    const nf = new Intl.NumberFormat('hu-HU');
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const slugify = (x) => fold(String(x || '').normalize('NFKD')).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'versenyzo';
+    const MONTHS = ['jan.', 'febr.', 'márc.', 'ápr.', 'máj.', 'jún.', 'júl.', 'aug.', 'szept.', 'okt.', 'nov.', 'dec.'];
+    const fmtDay = (iso, long) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return long ? `${y}. ${MONTHS[m - 1]} ${d}.` : `${MONTHS[m - 1]} ${d}.`;
+    };
+    let days = 30;
+    try { days = Number(new URLSearchParams(location.search).get('napok')) || 30; } catch (e) {}
+
+    // oldalnevek (versenyzők, versenyek) – a statikus adatfájlokból, ha elérhetők
+    const names = { athletes: new Map(), races: new Map() };
+    const namesReady = Promise.all([
+      fetch('data/finishers.min.json').then((r) => r.json()).then((d) => (d.athletes || []).forEach((a) => names.athletes.set(String(a[0]), a[1]))),
+      fetch('data/other/index.json').then((r) => r.json()).then((d) => (d.races || []).forEach((r) => names.races.set(r[0], `${r[4]} (${r[1]})`))),
+    ].map((p) => p.catch(() => {})));
+
+    function pageInfo(path) {
+      const [, v, x] = path.split('/');
+      if (!v) return { name: 'Főoldal – finisherek', href: './' };
+      if (v === 'evek') return { name: 'Évek', href: 'evek/' };
+      if (v === 'rekordok') return { name: 'Rekordok', href: 'rekordok/' };
+      if (v === 'versenyek') return { name: 'Versenyek', href: 'versenyek/' };
+      if (v === 'ev') return { name: `Nagyatád ${x}`, href: `ev/${x}/` };
+      if (v === 'verseny') return { name: names.races.get(x) || x, href: `verseny/${x}/` };
+      if (v === 'versenyzo') {
+        const n = names.athletes.get(x);
+        return { name: n || `Versenyző #${x}`, href: `versenyzo/${x}-${slugify(n)}/` };
+      }
+      return { name: path, href: '' };
+    }
+
+    function rpc(fn, body) {
+      const h = { 'Content-Type': 'application/json', apikey: CFG.supabaseKey };
+      if (CFG.supabaseKey.startsWith('eyJ')) h.Authorization = `Bearer ${CFG.supabaseKey}`;
+      return fetch(`${CFG.supabaseUrl.replace(/\/+$/, '')}/rest/v1/rpc/${fn}`, { method: 'POST', headers: h, body: JSON.stringify(body) })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
+    }
+
+    function tile(label, value, sub) {
+      return `<div class="tile"><div class="label">${label}</div><div class="value num">${value}</div><div class="sub">${sub}</div></div>`;
+    }
+
+    let S = null;
+    function render() {
+      const daily = S.daily || [];
+      const sum = (arr, i) => arr.reduce((s, r) => s + r[i], 0);
+      const today = daily[daily.length - 1] || [S.today, 0, 0];
+      const yesterday = daily[daily.length - 2] || ['', 0, 0];
+      const since = S.total.since ? fmtDay(S.total.since, true) : '–';
+      const top = S.top || [];
+      $stats.innerHTML = `
+        <div class="tiles">
+          ${tile('Összes megtekintés', nf.format(S.total.views), `${nf.format(S.total.visits)} látogatás · ${since} óta`)}
+          ${tile('Ma', nf.format(today[1]), `${nf.format(today[2])} látogatás`)}
+          ${tile('Tegnap', nf.format(yesterday[1]), `${nf.format(yesterday[2])} látogatás`)}
+          ${tile(`Utolsó ${S.days} nap`, nf.format(sum(daily, 1)), `${nf.format(sum(daily, 2))} látogatás`)}
+        </div>
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Napi megtekintések</h2><p>Vidd az egeret egy oszlop fölé a napi részletekért.</p></div>
+            <div class="seg" role="group" aria-label="Időszak">
+              ${[7, 30, 90, 365].map((n) => `<button type="button" data-days="${n}" class="${n === S.days ? 'active' : ''}" aria-pressed="${n === S.days}">${n === 365 ? '1 év' : `${n} nap`}</button>`).join('')}
+            </div>
+          </div>
+          <div class="views-chart" id="chart"></div>
+        </section>
+        <section class="card">
+          <div class="card-head"><div><h2>Legnézettebb oldalak</h2><p>Utolsó ${S.days} nap${top.length === 100 ? ', első 100' : ''}.</p></div></div>
+          ${top.length ? `<div class="table-wrap"><table>
+            <thead><tr><th>#</th><th>Oldal</th><th class="r">Megtekintés</th><th class="r">Látogatás</th></tr></thead>
+            <tbody>${top.map(([path, v, vi], i) => {
+              const p = pageInfo(path);
+              return `<tr><td>${i + 1}.</td><td class="name"><a href="${esc(p.href)}">${esc(p.name)}</a><span class="stat-path">${esc(path)}</span></td>
+                <td class="r">${nf.format(v)}</td><td class="r">${nf.format(vi)}</td></tr>`;
+            }).join('')}</tbody></table></div>` : '<p class="empty">Ebben az időszakban még nincs adat.</p>'}
+        </section>`;
+      drawChart();
+    }
+
+    function drawChart() {
+      const el = document.getElementById('chart');
+      if (!el) return;
+      const daily = S.daily || [];
+      const W = Math.max(el.clientWidth, 280), H = 220, L = 40, R = 4, T = 8, B = 26;
+      const max = Math.max(1, ...daily.map((d) => d[1]));
+      // „szép” lépésköz a rácsnak (1, 2, 5 × 10^n)
+      const raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+      const step = Math.max(1, [1, 2, 5, 10].map((k) => k * mag).find((s) => s >= raw));
+      const top = Math.ceil(max / step) * step;
+      const y = (v) => T + (H - T - B) * (1 - v / top);
+      const n = daily.length, slot = (W - L - R) / n, gap = n > 120 ? 0.5 : 2;
+      const bw = Math.max(1, slot - gap);
+      let s = '';
+      for (let v = 0; v <= top; v += step) {
+        s += `<line class="${v ? 'grid' : 'base'}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`;
+        s += `<text class="tick" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${nf.format(v)}</text>`;
+      }
+      const every = Math.ceil(n / Math.max(2, Math.floor((W - L) / 70)));
+      daily.forEach(([day, v], i) => {
+        const x = L + i * slot + gap / 2, h = (H - B) - y(v);
+        const r = Math.min(4, bw / 2, h);
+        // felül lekerekített, az alapvonalon szögletes oszlop
+        const path = h > 0 ? `M${x},${H - B}V${y(v) + r}Q${x},${y(v)} ${x + r},${y(v)}H${x + bw - r}Q${x + bw},${y(v)} ${x + bw},${y(v) + r}V${H - B}Z` : '';
+        s += `<rect class="hit" data-i="${i}" x="${L + i * slot}" y="${T}" width="${slot}" height="${H - T - B}"/>`;
+        s += `<path class="bar" d="${path}"/>`;
+        if ((n - 1 - i) % every === 0) s += `<text class="tick" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${fmtDay(day)}</text>`;
+      });
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Napi megtekintések az utolsó ${n} napban">${s}</svg>`;
+      el.querySelectorAll('.hit').forEach((h) => {
+        h.addEventListener('mousemove', (e) => {
+          const [day, v, vi] = daily[Number(h.dataset.i)];
+          $tip.innerHTML = `<div class="tt-title">${fmtDay(day, true)}</div>
+            <div class="tt-row"><span>Megtekintés</span><b>${nf.format(v)}</b></div>
+            <div class="tt-row"><span>Látogatás</span><b>${nf.format(vi)}</b></div>`;
+          $tip.hidden = false;
+          const tw = $tip.offsetWidth;
+          $tip.style.left = `${Math.min(e.clientX + 14, innerWidth - tw - 8)}px`;
+          $tip.style.top = `${e.clientY + 14}px`;
+        });
+        h.addEventListener('mouseleave', () => { $tip.hidden = true; });
+      });
+    }
+
+    function load(n) {
+      days = n;
+      return rpc('page_view_stats', { p_days: n }).then((d) => { S = d; return namesReady; }).then(render).catch((e) => {
+        console.error(e);
+        $stats.innerHTML = '<div class="notice"><p>A statisztika most nem érhető el (az adatbázis nem válaszol). Próbáld újra később.</p></div>';
+      });
+    }
+
+    $stats.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-days]');
+      if (!b) return;
+      const n = Number(b.dataset.days);
+      history.replaceState(null, '', n === 30 ? location.pathname : `?napok=${n}`);
+      load(n);
+    });
+    let rt = 0;
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => S && drawChart(), 100); });
+    addEventListener('scroll', () => { $tip.hidden = true; }, { passive: true });
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      const root = document.documentElement;
+      const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme = dark ? 'light' : 'dark';
+      try { localStorage.setItem('theme', root.dataset.theme); } catch (e) {}
+    });
+
+    if (!(CFG.supabaseUrl && CFG.supabaseKey)) {
+      $stats.innerHTML = '<div class="notice"><p>Nincs beállítva adatbázis (config.js).</p></div>';
+    } else load([7, 30, 90, 365].includes(days) ? days : 30);
+  })();
+  </script>
+</body>
+</html>

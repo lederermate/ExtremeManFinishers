@@ -31,6 +31,7 @@ https://lederermate.github.io/ExtremeManFinishers/
 | `data/other/` | **ezt tölti be az oldal** a további versenyekhez: `index.json` (versenyek + ki hol indult) és versenyenként egy fájl, csak amikor kell |
 | `data/finishers.json`, `data/other.json` | a teljes adat a build kimeneteként (ebből készül a Supabase seed és a tömör fájlok) – tartalék |
 | `supabase/schema.sql` | adatbázis séma + jogosultságok + `finisher_data()` függvény |
+| `statisztika/` | látogatottság (nem linkelt, `noindex` oldal): összes / napi megtekintés, legnézettebb oldalak |
 | `supabase/seed.sql` | az adatok betöltése (generált fájl) |
 | `supabase/seed_laps.sql` | köztes mérőpontok (köridők) betöltése (generált fájl) |
 | `data/laps/`, `data/splits/` | köztes mérőpontok rajtszám, ill. versenyző szerint (tartalék) |
@@ -74,6 +75,22 @@ oldal kb. 140–260 KB (korábban 390–430 KB), versenyoldal kb. 155–165 KB (
 
 **Settings → Pages → Build and deployment**: *Source:* **Deploy from a branch**,
 *Branch:* **main**, mappa: **/ (root)** → **Save**. Pár perc múlva él az oldal.
+
+## Látogatásszámláló
+
+Az oldal süti és személyes adat nélkül számolja, hányan nézik: minden oldalmegnyitáskor (és belső
+navigációkor) az `app.js` meghívja a Supabase `track_view(útvonal, belépés)` függvényét, ami a
+`page_views` táblában oldalanként és naponta növel egy számlálót. IP-cím, böngésző-azonosító nem
+tárolódik; a böngésző a táblát közvetlenül nem olvashatja, és csak az oldal valódi útvonalait
+(pl. `/ev/2024`, `/versenyzo/123`) fogadja el.
+
+- **Megtekintés:** minden oldalmegnyitás. **Látogatás:** kívülről érkezett az oldalra (nem belső
+  link, nem frissítés / vissza gomb) – közelítő szám.
+- Nem számol: keresőrobotok, automatizált böngészők, `localhost`.
+- Eredmények: **https://lederermate.github.io/ExtremeManFinishers/statisztika/** (nincs a menüben,
+  a keresők nem indexelik; az összesítést a `page_view_stats(napok)` függvény adja).
+- A tábla és a függvények a `supabase/schema.sql` végén vannak; a GitHub Action a `main` ágra
+  kerüléskor lefuttatja.
 
 ## Adatok frissítése
 

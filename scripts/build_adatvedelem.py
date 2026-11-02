@@ -113,7 +113,7 @@ def main() -> None:
       <h1>Adatvédelem és források</h1>
       <p class="lead">Ez az oldal <b>kizárólag nyilvánosan elérhető</b>, a versenyek szervezői és időmérői által
         már közzétett eredményekből dolgozik. Minden adat forrását alább, linkkel együtt felsoroljuk.
-        A látogatókról nem gyűjtünk adatot.</p>
+        A látogatókról nem gyűjtünk személyes adatot.</p>
     </div>
 
     <section class="card prose">
@@ -121,7 +121,7 @@ def main() -> None:
       <ul>
         <li>Az eredmények <b>nyilvános eredménylistákból</b> származnak (extremetour.hu, EvoChip) – új, nem nyilvános adatot nem gyűjtünk, és senkitől nem kérünk be adatot.</li>
         <li>Az oldal célja a verseny történetének és a célba érkezők teljesítményének bemutatása (sporttörténeti statisztika). Nem kereskedelmi célú, nincs rajta hirdetés.</li>
-        <li>Nincs regisztráció, nincsenek sütik, nincs látogatottságmérés vagy követés.</li>
+        <li>Nincs regisztráció, nincsenek sütik és nincs követés. Csak azt számoljuk, hányszor nézték meg az egyes oldalakat (névtelen, napi összesítés).</li>
         <li>Ha szerepelsz az oldalon, és szeretnéd, hogy az adataidat javítsuk vagy eltávolítsuk, <a href="adatvedelem.html#kerelem">írj nekünk</a>.</li>
       </ul>
     </section>
@@ -163,6 +163,11 @@ def main() -> None:
       <h2>A látogatókról</h2>
       <ul>
         <li><b>Nincsenek sütik és nincs követés</b> (nincs Google Analytics, közösségi gomb, hirdetés).</li>
+        <li><b>Látogatásszámláló:</b> hogy lássuk, hányan nézik az oldalt, megnyitáskor a böngésződ elküldi a
+          {ext("https://supabase.com/privacy", "Supabase")} adatbázisnak, melyik oldalt nyitottad meg (pl. <code>/ev/2024</code>), és hogy
+          kívülről érkeztél-e. Ebből csak oldalanként, naponta összesített darabszám lesz – IP-címet, böngésző-azonosítót
+          vagy bármit, ami hozzád köthető, nem tárolunk, és sütit sem használunk. Az összesítés
+          <a href="statisztika/">itt látható</a>.</li>
         <li>A világos/sötét téma választása csak a <b>saját böngésződben</b> tárolódik (localStorage), hozzánk nem jut el.</li>
         <li>A betűtípusok és a képek erről az oldalról töltődnek be, nem külső szolgáltatótól.</li>
         <li>Tárhely: az oldalt a {ext("https://pages.github.com/", "GitHub Pages")} szolgálja ki; a GitHub technikai
