@@ -1167,6 +1167,9 @@ def main() -> None:
     idbook.save()
     update_redirects(old_sig, old_names)
     print("Kimenet: supabase/seed.sql, data/finishers.json, data/match_report.txt")
+    # a böngészőnek szánt tömör fájlok (data/finishers.min.json, data/other/)
+    import build_static_data
+    build_static_data.main()
 
 
 if __name__ == "__main__":

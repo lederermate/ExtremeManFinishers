@@ -279,7 +279,7 @@ def main() -> None:
             k = x["race"]["series"]
             per.setdefault(k, [x["race"]["series_name"], 0])[1] += 1
         chips = "".join(f'<button type="button" class="chip" data-scroll="s-{k}">{esc(nm)} <b>{n}×</b></button>'
-                        for k, (nm, n) in sorted(per.items(), key=lambda kv: -kv[1][1]))
+                        for k, (nm, n) in sorted(per.items(), key=lambda kv: (-kv[1][1], kv[0])))
         if res:
             n_core += 1
             b = min(res, key=lambda r: r["t"])

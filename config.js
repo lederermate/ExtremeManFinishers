@@ -1,6 +1,8 @@
 // eXtremeMan finisherek – adatbázis beállítások.
 //
-// Üresen hagyva az oldal a beépített pillanatképből (data/finishers.json) dolgozik.
+// Az oldal elsőként a statikus, tömör adatfájlokat tölti be (data/finishers.min.json, data/other/ –
+// gyorsabbak és a CDN gyorsítótárazza őket); a Supabase csak tartalék, ha ezek nem érhetők el.
+// Üresen hagyva tartalékként a data/finishers.json pillanatkép töltődik be.
 //
 // Élesítéshez (Supabase): Project Settings → API Keys
 //   supabaseUrl: a projekt URL-je, pl. https://abcd1234.supabase.co

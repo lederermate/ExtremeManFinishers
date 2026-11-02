@@ -98,26 +98,45 @@
   // ------------------------------------------------------------------
   // Adatok betöltése és feldolgozása
   // ------------------------------------------------------------------
+  /** Az adatok betöltése. Elsőként a tömör statikus fájl (data/finishers.min.json, scripts/build_static_data.py):
+   *  a CDN gyorsítótárazza és tömörítve adja, és ugyanabból a buildből készül, mint a Supabase adatai.
+   *  Tartalék: a Supabase (finisher_data), végül a régi formátumú data/finishers.json. */
   async function fetchData() {
+    try {
+      const res = await fetch(`${ROOT_PATH}data/finishers.min.json`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return { d: unpackFinishers(await res.json()), source: 'static' };
+    } catch (e) {
+      console.warn('A tömör adatfájl nem tölthető be, tartalék forrás következik.', e);
+    }
     if (CFG.supabaseUrl && CFG.supabaseKey) {
       try {
-        const headers = { 'Content-Type': 'application/json', apikey: CFG.supabaseKey };
-        if (CFG.supabaseKey.startsWith('eyJ')) headers.Authorization = `Bearer ${CFG.supabaseKey}`;
-        const res = await fetch(`${CFG.supabaseUrl.replace(/\/+$/, '')}/rest/v1/rpc/finisher_data`, {
-          method: 'POST', headers, body: '{}',
-        });
+        const res = await fetch(rpcUrl('finisher_data'), { method: 'POST', headers: rpcHeaders(), body: '{}' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const d = await res.json();
         if (!d || !Array.isArray(d.results) || !d.results.length) throw new Error('üres adat');
         return { d, source: 'supabase' };
       } catch (e) {
-        console.warn('A Supabase nem elérhető, a beépített pillanatkép töltődik be.', e);
-        const res = await fetch(`${ROOT_PATH}data/finishers.json`);
-        return { d: await res.json(), source: 'fallback' };
+        console.warn('A Supabase nem elérhető.', e);
       }
     }
     const res = await fetch(`${ROOT_PATH}data/finishers.json`);
     return { d: await res.json(), source: 'snapshot' };
+  }
+  /** finishers.min.json -> a régi { athletes, results } alak (a buildModel ezt várja). */
+  function unpackFinishers(p) {
+    const results = [];
+    for (const [ys, c] of Object.entries(p.years)) {
+      const year = Number(ys);
+      let t = 0;
+      for (let i = 0; i < c.a.length; i++) {
+        t += c.t[i];
+        const at = (k) => (c[k] ? c[k][i] ?? null : null);
+        results.push([c.a[i], year, i + 1, t, at('s'), at('t1'), at('b'), at('t2'), at('r'),
+          c.c && c.c[i] >= 0 ? p.clubs[c.c[i]] : null]);
+      }
+    }
+    return { athletes: p.athletes, results };
   }
 
   const DISC = [
@@ -834,23 +853,24 @@
   // Körönkénti adatok (data/splits/<év>.json, igény szerint betöltve)
   // ------------------------------------------------------------------
   const lapCache = new Map();
-  async function fetchLaps(year) {
-    if (source === 'supabase') {
-      try {
-        const headers = { 'Content-Type': 'application/json', apikey: CFG.supabaseKey };
-        if (CFG.supabaseKey.startsWith('eyJ')) headers.Authorization = `Bearer ${CFG.supabaseKey}`;
-        const res = await fetch(`${CFG.supabaseUrl.replace(/\/+$/, '')}/rest/v1/rpc/lap_data`, {
-          method: 'POST', headers, body: JSON.stringify({ p_year: year }),
-        });
-        if (res.ok) {
-          const d = await res.json();
-          if (d && d.points && d.points.length) return d;
-        }
-      } catch (e) { /* tartalék fájl */ }
-    }
-    const r = await fetch(`${ROOT_PATH}data/splits/${year}.json`);
-    return r.ok ? r.json() : null;
+  /** Statikus fájl elsőként (gyorsítótárazható); a Supabase csak akkor, ha a fájl nem érhető el. */
+  async function staticThenRpc(path, fn, body) {
+    try {
+      const r = await fetch(`${ROOT_PATH}${path}`);
+      if (r.ok) return await r.json();
+      if (r.status === 404) return null; // nincs ilyen adat
+    } catch (e) { /* hálózati hiba: Supabase */ }
+    if (!(CFG.supabaseUrl && CFG.supabaseKey)) return null;
+    try {
+      const res = await fetch(rpcUrl(fn), { method: 'POST', headers: rpcHeaders(), body: JSON.stringify(body) });
+      if (res.ok) {
+        const d = await res.json();
+        if (d && d.points && d.points.length) return d;
+      }
+    } catch (e) { /* nincs adat */ }
+    return null;
   }
+  const fetchLaps = (year) => staticThenRpc(`data/splits/${year}.json`, 'lap_data', { p_year: year });
   /** Átalakítás: [[összidő, helyezés], ...] -> [[összidő, köridő, helyezés], ...] */
   function expandLaps(d) {
     if (!d) return null;
@@ -871,19 +891,8 @@
   function loadRaceLaps(key) {
     const ck = `race:${key}`;
     if (!lapCache.has(ck)) {
-      lapCache.set(ck, (async () => {
-        if (source === 'supabase') {
-          try {
-            const res = await fetch(rpcUrl('race_lap_data'), { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_key: key }) });
-            if (res.ok) {
-              const d = await res.json();
-              if (d && d.points && d.points.length) return expandLaps(d);
-            }
-          } catch (e) { /* tartalék fájl */ }
-        }
-        const r = await fetch(`${ROOT_PATH}data/splits_other/${key}.json`);
-        return r.ok ? expandLaps(await r.json()) : null;
-      })().catch(() => null));
+      lapCache.set(ck, staticThenRpc(`data/splits_other/${key}.json`, 'race_lap_data', { p_key: key })
+        .then(expandLaps).catch(() => null));
     }
     return lapCache.get(ck);
   }
@@ -1338,12 +1347,23 @@
   }
   const rpcUrl = (fn) => `${CFG.supabaseUrl.replace(/\/+$/, '')}/rest/v1/rpc/${fn}`;
 
+  /* További eXtremeMan versenyek. A data/other/index.json a versenyek listája és az, hogy ki melyiken
+   * indult (kicsi); egy verseny eredményei a data/other/<kulcs>.json-ban vannak, és csak akkor töltődnek
+   * be, amikor kellenek (versenyoldal, az adott versenyző adatlapja). Tartalék: Supabase other_data,
+   * végül a data/other.json (mindkettő az összes versenyt egyben adja). */
   let otherPromise = null;
   function loadOther() {
     if (!otherPromise) {
       otherPromise = (async () => {
+        try {
+          const r = await fetch(`${ROOT_PATH}data/other/index.json`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return buildOtherIndex(await r.json());
+        } catch (e) {
+          console.warn('A versenyek indexe nem tölthető be, tartalék forrás következik.', e);
+        }
         let d = null;
-        if (source === 'supabase') {
+        if (CFG.supabaseUrl && CFG.supabaseKey) {
           try {
             const res = await fetch(rpcUrl('other_data'), { method: 'POST', headers: rpcHeaders(), body: '{}' });
             if (res.ok) d = await res.json();
@@ -1356,29 +1376,75 @@
     return otherPromise;
   }
 
-  function buildOther(d) {
-    const races = d.races.map(([key, year, series, seriesName, name, segLabels, n, best, med, hasLaps]) => ({
-      key, year, series, seriesName, name, n, best, median: med, res: [], hasLaps: !!hasLaps,
+  function otherSkeleton(raceRows) {
+    const races = raceRows.map(([key, year, series, seriesName, name, segLabels, n, best, med, hasLaps], idx) => ({
+      key, year, series, seriesName, name, n, best, median: med, res: [], hasLaps: !!hasLaps, idx, loaded: false,
       segLabels: Array.isArray(segLabels) ? segLabels : JSON.parse(segLabels || '[]'),
     }));
-    const people = new Map();
-    for (const [id, name, by, sex] of d.athletes) people.set(id, { id, name, by, sex, key: fold(name) });
-    const byAthlete = new Map();
-    for (const [ri, aid, pos, sexRank, t, segs, club] of d.results) {
-      const race = races[ri];
-      if (!race) continue;
-      const r = { race, aid, pos, sexRank, t, segs: Array.isArray(segs) ? segs : JSON.parse(segs || '[]'), club };
-      race.res.push(r);
-      if (!byAthlete.has(aid)) byAthlete.set(aid, []);
-      byAthlete.get(aid).push(r);
-    }
-    for (const r of races) r.res.sort((x, y) => x.pos - y.pos);
     const series = new Map();
     for (const r of races) {
       if (!series.has(r.series)) series.set(r.series, { key: r.series, name: r.seriesName, races: [] });
       series.get(r.series).races.push(r);
     }
-    return { races, byKey: new Map(races.map((r) => [r.key, r])), people, byAthlete, series };
+    return { races, byKey: new Map(races.map((r) => [r.key, r])), people: new Map(), byAthlete: new Map(), index: new Map(), series };
+  }
+  function addPerson(O, [id, name, by, sex]) {
+    if (!O.people.has(id)) O.people.set(id, { id, name, by, sex, key: fold(name) });
+  }
+  function addOtherResult(O, race, [aid, pos, sexRank, t, segs, club]) {
+    const r = { race, aid, pos, sexRank, t, segs: Array.isArray(segs) ? segs : JSON.parse(segs || '[]'), club };
+    race.res.push(r);
+    if (!O.byAthlete.has(aid)) O.byAthlete.set(aid, []);
+    O.byAthlete.get(aid).push(r);
+  }
+  /** data/other/index.json: a versenyek listája, versenyzőnként a versenyek indexével (eredmények nélkül). */
+  function buildOtherIndex(p) {
+    const O = otherSkeleton(p.races);
+    for (const [aid, ...ris] of p.ath) O.index.set(aid, ris);
+    return O;
+  }
+  /** Teljes adat egyben (Supabase other_data / data/other.json): minden verseny betöltve. */
+  function buildOther(d) {
+    const O = otherSkeleton(d.races);
+    for (const a of d.athletes) addPerson(O, a);
+    for (const [ri, ...row] of d.results) {
+      const race = O.races[ri];
+      if (!race) continue;
+      addOtherResult(O, race, row);
+      if (!O.index.has(row[0])) O.index.set(row[0], []);
+      O.index.get(row[0]).push(ri);
+    }
+    for (const r of O.races) { r.res.sort((x, y) => x.pos - y.pos); r.loaded = true; }
+    return O;
+  }
+  /** A megadott versenyek eredményeinek betöltése (ami még nincs meg), párhuzamosan. */
+  function ensureRaces(O, races) {
+    return Promise.all(races.filter((race) => !race.loaded).map((race) => race.loading || (race.loading = (async () => {
+      const res = await fetch(`${ROOT_PATH}data/other/${race.key}.json`);
+      if (!res.ok) throw new Error(`${race.key}: HTTP ${res.status}`);
+      const d = await res.json();
+      for (const p of d.people) addPerson(O, p);
+      for (const row of d.res) addOtherResult(O, race, row);
+      race.res.sort((x, y) => x.pos - y.pos);
+      race.loaded = true;
+    })().catch((e) => { race.loading = null; throw e; }))))
+      // a versenyzőnkénti sorrend ne a letöltések sorrendjén múljon
+      .then(() => { for (const rs of O.byAthlete.values()) rs.sort((x, y) => x.race.idx - y.race.idx); });
+  }
+  /** Egy versenyző összes további versenye betöltve (null, ha nem sikerült). */
+  async function loadOtherFor(aid) {
+    const O = await loadOther();
+    if (!O) return null;
+    try { await ensureRaces(O, (O.index.get(aid) || []).map((i) => O.races[i])); } catch (e) { console.error(e); return null; }
+    return O;
+  }
+  /** Egy verseny teljes eredménylistája betöltve. */
+  async function loadOtherRace(key) {
+    const O = await loadOther();
+    const race = O && O.byKey.get(key);
+    if (!race) return O;
+    try { await ensureRaces(O, [race]); } catch (e) { console.error(e); return null; }
+    return O;
   }
   const personOf = (O, id) => M.A.get(id) || O.people.get(id) || null;
 
@@ -1414,7 +1480,7 @@
     for (const r of rs) per.set(r.race.series, { name: r.race.seriesName, n: (per.get(r.race.series)?.n || 0) + 1 });
     const chips = [];
     if (nagyatadCount) chips.push(`<span class="chip chip-main">Nagyatád teljes táv <b>${nagyatadCount}×</b></span>`);
-    for (const [k, v] of [...per.entries()].sort((x, y) => y[1].n - x[1].n)) {
+    for (const [k, v] of [...per.entries()].sort((x, y) => y[1].n - x[1].n || (x[0] < y[0] ? -1 : 1))) {
       chips.push(`<button type="button" class="chip" data-scroll="s-${k}">${esc(v.name)} <b>${v.n}×</b></button>`);
     }
     return chips.length > (nagyatadCount ? 1 : 0) ? `<span class="chips-label">Versenyei:</span>${chips.join('')}` : '';
@@ -1439,8 +1505,8 @@
     const wrap = tr.closest('.table-wrap');
     const host = row.querySelector('.lap-host');
     if (wrap) host.style.width = `${Math.max(260, wrap.clientWidth - 40)}px`;  // a .table-wrap két oldali 20 px-es belső margója nélkül
-    const O = await loadOther();
     const key = btn.dataset.race, aid = Number(btn.dataset.aid);
+    const O = await loadOtherRace(key);
     const race = O && O.byKey.get(key);
     const person = O && personOf(O, aid);
     if (!race || !person) return;
@@ -1449,7 +1515,10 @@
   });
 
   function fillOther(a) {
-    loadOther().then((O) => {
+    loadOther().then(async (O0) => {
+      // csak akkor töltünk le versenyeredményt, ha a versenyző indult további versenyen
+      if (!O0 || !(O0.index.get(a.id) || []).length) return;
+      const O = await loadOtherFor(a.id);
       const card = document.getElementById('otherCard');
       if (!O || !card || Number(card.dataset.aid) !== a.id) return;
       if (!(O.byAthlete.get(a.id) || []).length) return;
@@ -1464,7 +1533,7 @@
   /** Versenyző, aki csak a további versenyeken indult (nincs nagyatádi teljes távja). */
   async function renderSideAthlete(id) {
     $app.innerHTML = loadingHtml;
-    const O = await loadOther();
+    const O = await loadOtherFor(id);
     if (currentRoute()[0] !== 'versenyzo' || Number(currentRoute()[1]) !== id) return;
     const p = O && O.people.get(id);
     const rs = (O && O.byAthlete.get(id)) || [];
@@ -1497,7 +1566,7 @@
   /** Egy verseny (sorozat + év + táv) teljes eredménylistája. */
   async function renderRace(key) {
     $app.innerHTML = loadingHtml;
-    const O = await loadOther();
+    const O = await loadOtherRace(key);
     if (currentRoute()[1] !== key) return;
     const r = O && O.byKey.get(key);
     if (!r) return renderNotFound('Nincs ilyen verseny.');
@@ -1676,8 +1745,8 @@
     M = buildModel(d);
     source = src;
     document.getElementById('dataSource').textContent = {
-      supabase: 'Adatok: Supabase adatbázis.',
-      fallback: 'A Supabase adatbázis most nem érhető el – a beépített pillanatkép látszik.',
+      static: '',
+      supabase: 'Adatok: Supabase adatbázis (tartalék forrás).',
       snapshot: 'Adatok: beépített pillanatkép (data/finishers.json).',
     }[source];
     upgradeHash();

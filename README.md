@@ -27,7 +27,9 @@ https://lederermate.github.io/ExtremeManFinishers/
 | --- | --- |
 | `index.html`, `style.css`, `app.js` | az oldal |
 | `config.js` | Supabase elérés (üresen: a beépített pillanatképből fut) |
-| `data/finishers.json` | az összes adat tömör formában – tartalék, ha a Supabase nem elérhető |
+| `data/finishers.min.json` | **ezt tölti be az oldal**: a nagyatádi eredmények évenkénti oszlopos, tömör formában (`scripts/build_static_data.py`) |
+| `data/other/` | **ezt tölti be az oldal** a további versenyekhez: `index.json` (versenyek + ki hol indult) és versenyenként egy fájl, csak amikor kell |
+| `data/finishers.json`, `data/other.json` | a teljes adat a build kimeneteként (ebből készül a Supabase seed és a tömör fájlok) – tartalék |
 | `supabase/schema.sql` | adatbázis séma + jogosultságok + `finisher_data()` függvény |
 | `supabase/seed.sql` | az adatok betöltése (generált fájl) |
 | `supabase/seed_laps.sql` | köztes mérőpontok (köridők) betöltése (generált fájl) |
@@ -55,9 +57,14 @@ https://lederermate.github.io/ExtremeManFinishers/
 > A publishable/anon kulcs nyilvános, böngészőbe szánt kulcs. A **secret /
 > service_role** kulcsot soha ne tedd a weboldalba!
 
-Az adatbázis a böngészőből csak olvasható (RLS). Az oldal egyetlen hívással
-(`rpc/finisher_data`) tölti le az összes adatot; ha ez nem sikerül, automatikusan a
-`data/finishers.json` pillanatképet használja.
+Az adatbázis a böngészőből csak olvasható (RLS). **Az oldal elsőként a statikus, tömör
+fájlokat tölti be** (`data/finishers.min.json`, `data/other/`, `data/splits*/`): ezeket a GitHub Pages
+CDN-je gyorsítótárazza és tömörítve adja, és ugyanabból a buildből készülnek, mint a Supabase adatai.
+A Supabase (`rpc/finisher_data`, `other_data`, `lap_data`, `race_lap_data`) csak tartalék, ha a fájlok
+nem érhetők el; végül a `data/finishers.json` / `data/other.json` pillanatkép.
+
+Letöltött adatmennyiség (tömörítve): főoldal kb. 140 KB (korábban kb. 200 KB + Supabase), versenyzői
+oldal kb. 140–260 KB (korábban 390–430 KB), versenyoldal kb. 155–165 KB (korábban kb. 360 KB).
 
 > Az ingyenes Supabase projekt 7 nap inaktivitás után szünetel. Ilyenkor az oldal
 > továbbra is működik a pillanatképből; a projektet a Supabase felületén egy
@@ -83,7 +90,7 @@ for y in 22 23 24 25 26; do
 done
 
 # összefésülés -> supabase/seed.sql, data/finishers.json, data/match_report.txt
-python3 scripts/build_data.py
+python3 scripts/build_data.py   # a végén a build_static_data.py is lefut (data/finishers.min.json, data/other/)
 ```
 
 Köztes mérőpontok (úszás körök, kerékpár szakaszok, futás körök) az EvoChip egyéni
