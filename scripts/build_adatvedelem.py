@@ -121,7 +121,7 @@ def main() -> None:
       <ul>
         <li>Az eredmények <b>nyilvános eredménylistákból</b> származnak (extremetour.hu, EvoChip) – új, nem nyilvános adatot nem gyűjtünk, és senkitől nem kérünk be adatot.</li>
         <li>Az oldal célja a verseny történetének és a célba érkezők teljesítményének bemutatása (sporttörténeti statisztika). Nem kereskedelmi célú, nincs rajta hirdetés.</li>
-        <li>Nincs regisztráció, nincsenek sütik és nincs követés. Csak azt számoljuk, hányszor nézték meg az egyes oldalakat (névtelen, napi összesítés).</li>
+        <li>Nincs regisztráció, nincsenek sütik és nincs követés. Csak azt számoljuk, hányszor nézték meg az egyes oldalakat – névtelenül, napi összesítésben (<a href="adatvedelem.html#latogatas">részletek</a>).</li>
         <li>Ha szerepelsz az oldalon, és szeretnéd, hogy az adataidat javítsuk vagy eltávolítsuk, <a href="adatvedelem.html#kerelem">írj nekünk</a>.</li>
       </ul>
     </section>
@@ -147,6 +147,11 @@ def main() -> None:
         Az adatok kezelésének jogalapja az általános adatvédelmi rendelet (GDPR) 6. cikk (1) bekezdés f) pontja szerinti
         jogos érdek: a már nyilvános sporteredmények sporttörténeti célú, összesített bemutatása.
         Az adatokat nem adjuk át senkinek, nem használjuk marketingre vagy profilalkotásra.</p>
+      <p>A látogatásszámláló célja, hogy lássuk, mennyien és mely oldalakat használják – ebből derül ki, mit érdemes
+        fejleszteni. Amit eltárolunk, az névtelen, napi összesítés, amiből senki nem azonosítható, így nem személyes adat.
+        Az oldalmegnyitáskor elküldött kérés technikai kezelésének jogalapja szintén a GDPR 6. cikk (1) bekezdés f) pontja
+        (jogos érdek: az oldal használatának mérése). A számlálás nem tárol és nem olvas ki semmit a készülékedről
+        (nincs süti, nincs helyi tárolás), ezért nem kér hozzájárulást.</p>
     </section>
 
     <section class="card prose" id="kerelem">
@@ -159,21 +164,48 @@ def main() -> None:
         ({ext("https://www.naih.hu/", "naih.hu")}) is fordulhatsz.</p>
     </section>
 
+    <section class="card prose" id="latogatas">
+      <h2>Látogatásszámláló</h2>
+      <p>Hogy lássuk, hányan nézik az oldalt, minden oldalmegnyitáskor (és az oldalon belüli kattintáskor) a böngésződ egy
+        rövid üzenetet küld az oldal {ext("https://supabase.com/privacy", "Supabase")} adatbázisának.</p>
+      <h3>Mit küld el a böngésződ?</h3>
+      <ul>
+        <li>a megnyitott oldal útvonalát (pl. <code>/ev/2024</code> vagy <code>/versenyzo/123</code>),</li>
+        <li>és hogy kívülről érkeztél-e az oldalra (pl. keresőből vagy linkről), vagy az oldalon belül kattintottál tovább.</li>
+      </ul>
+      <p>Mint minden internetes kérésnél, a Supabase szervere technikailag látja az IP-címedet és a böngésződ típusát,
+        és ezekről rövid ideig technikai naplót vezethet ({ext("https://supabase.com/privacy", "Supabase adatvédelmi nyilatkozat")}).
+        Ezeket mi nem tároljuk és nem használjuk.</p>
+      <h3>Mit tárolunk?</h3>
+      <p>Oldalanként és naponta két számot: hányszor nyitották meg az oldalt (<b>megtekintés</b>), és ebből hányszor
+        érkezett valaki kívülről (<b>látogatás</b>). Például: <i>2026-11-02, /ev/2024 – 37 megtekintés, 12 látogatás</i>.
+        Ennél többet nem: nincs IP-cím, böngésző-azonosító, ujjlenyomat, süti, és nem követjük, ki melyik oldalakat
+        nézte meg egymás után.</p>
+      <h3>Meddig és ki látja?</h3>
+      <ul>
+        <li>A napi összesítéseket időkorlát nélkül megőrizzük, mert névtelenek, és ezekből látszik az oldal látogatottsága az évek során.</li>
+        <li>Az összesítés nyilvános, <a href="statisztika/">itt megnézheted</a>. Másnak nem adjuk át.</li>
+      </ul>
+      <h3>Mit nem számolunk, és hogyan maradhatsz ki?</h3>
+      <ul>
+        <li>A keresőrobotokat és az automatizált böngészőket nem számoljuk.</li>
+        <li>Ha nem szeretnéd, hogy a megnyitásaid beleszámítsanak, tiltsd le a böngésződben (pl. tartalomblokkolóval) a
+          <code>supabase.co</code> címet. Az oldal ugyanúgy működik tovább, mert az eredményeket nem onnan tölti be.</li>
+      </ul>
+    </section>
+
     <section class="card prose">
       <h2>A látogatókról</h2>
       <ul>
         <li><b>Nincsenek sütik és nincs követés</b> (nincs Google Analytics, közösségi gomb, hirdetés).</li>
-        <li><b>Látogatásszámláló:</b> hogy lássuk, hányan nézik az oldalt, megnyitáskor a böngésződ elküldi a
-          {ext("https://supabase.com/privacy", "Supabase")} adatbázisnak, melyik oldalt nyitottad meg (pl. <code>/ev/2024</code>), és hogy
-          kívülről érkeztél-e. Ebből csak oldalanként, naponta összesített darabszám lesz – IP-címet, böngésző-azonosítót
-          vagy bármit, ami hozzád köthető, nem tárolunk, és sütit sem használunk. Az összesítés
-          <a href="statisztika/">itt látható</a>.</li>
+        <li>Az oldalmegnyitásokat névtelenül, napi összesítésben számoljuk – lásd a <a href="adatvedelem.html#latogatas">Látogatásszámláló</a> részt.</li>
         <li>A világos/sötét téma választása csak a <b>saját böngésződben</b> tárolódik (localStorage), hozzánk nem jut el.</li>
         <li>A betűtípusok és a képek erről az oldalról töltődnek be, nem külső szolgáltatótól.</li>
         <li>Tárhely: az oldalt a {ext("https://pages.github.com/", "GitHub Pages")} szolgálja ki; a GitHub technikai
           naplót vezethet a kérésekről (pl. IP-cím) – lásd a {ext("https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement", "GitHub adatvédelmi nyilatkozatát")}.</li>
-        <li>Adatbázis: az eredményeket a böngésződ a {ext("https://supabase.com/privacy", "Supabase")} szolgáltatásból tölti le
-          (ha nem érhető el, az oldalba épített pillanatképből). Ilyenkor a Supabase is technikai naplót vezethet.</li>
+        <li>Az eredmények erről az oldalról töltődnek be. A {ext("https://supabase.com/privacy", "Supabase")} adatbázist a böngésződ
+          csak a látogatásszámlálóhoz, illetve tartalékként éri el, ha az oldal adatfájljai nem érhetők el. Ilyenkor a Supabase
+          is technikai naplót vezethet.</li>
         <li>A külső oldalakra (források, fotók) mutató linkek csak akkor nyílnak meg, ha rájuk kattintasz.</li>
       </ul>
     </section>
