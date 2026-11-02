@@ -162,12 +162,24 @@ Kézi javítás a `data/overrides.json`-ban:
   kézzel – a sablont módosítsd, és futtasd újra a szkriptet.**
 - Oldalanként egyedi cím, leírás, kanonikus URL, Open Graph / Twitter kártya
   (`images/og.jpg`) és JSON-LD (WebSite, Dataset, ProfilePage, BreadcrumbList).
+- **Betöltéskori ugrás (CLS) ellen:** a fejlécfotót (hero) a `build_pages.py` a statikus HTML-be is
+  beleírja, pontosan az `app.js` `setHero()` jelölésével – ha az egyiket módosítod, a másikat is
+  (a JS a meglévő fotót nem rajzolja újra, csak a szöveget). A versenyzői chipeket az app az első
+  betöltéskor a statikus oldalról veszi át; a `main` legalább képernyőnyi magas, így a lábléc nem ugrik.
+- H1-ek: a hero H1-e a felirattal együtt kulcsszavas („eXtremeMan Nagyatád · teljes táv Finisherek”),
+  az év- és versenyoldalaké is („eXtremeMan Nagyatád eredmények 2026”, „Kaposvár 2015 eXtremeMan 113 Kaposvár”).
+- Meta description legfeljebb ~158 karakter (`fit()`), a további versenyek sorozatonként összevonva.
 - `sitemap.xml` minden oldallal; a `robots.txt` a `lederermate.github.io` repóban van
   (a domain gyökerében kell lennie).
 - Google Search Console: a `https://lederermate.github.io/ExtremeManFinishers/` címet
   URL-előtagként felvenni, és beküldeni a `sitemap.xml`-t.
 
 ## Források
+
+A teljes, linkelt forráslista és az adatvédelmi tájékoztató: `adatvedelem.html`
+(generálja: `python3 scripts/build_adatvedelem.py` – új év vagy esemény hozzáadása után futtasd újra;
+az adatkérésekhez szóló e-mail címet a szkript elején, a `CONTACT_EMAIL`-ben lehet megadni).
+
 
 - Finisherek 1990–2025: [extremetour.hu](https://www.extremetour.hu/finisherekabc)
 - Részidők 2022–2026, eredmények 2026: [EvoChip](https://www.evochip.hu/results/)

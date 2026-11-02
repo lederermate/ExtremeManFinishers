@@ -378,3 +378,15 @@ main a.chip { color: var(--ink); }
 .other-table tr.lap-row:hover > td { background: var(--surface); }
 .lap-host { min-width: 0; }
 .lap-host { position: sticky; left: 0; }
+
+/* ---------- SEO / CLS (build_pages.py + app.js) ---------- */
+/* a hero H1-e a feliratot és a címet is tartalmazza; a kinézet ugyanaz, mint korábban */
+.hero-h1 { margin: 0; font: inherit; letter-spacing: normal; text-transform: none; }
+.hero-h1 .hero-title { display: block; }
+/* kisebb, kulcsszavas sor a H1-ben (év- és versenyoldal) */
+.h1-pre { display: block; margin-bottom: 4px; font: 600 13px/1.3 'Source Sans 3', system-ui, sans-serif;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.h1-sub { display: block; margin-top: 10px; font: 400 17px/1.4 'Source Sans 3', system-ui, sans-serif;
+  letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+/* a lábléc betöltés közben se ugorjon be a képbe (a tartalom utólag töltődik) */
+main.wrap { min-height: 100vh; }
