@@ -1,3 +1,5 @@
-2025-balatonszemes-113: Kerékpár (vége) 13.5 km
-2025-balatonszemes-p113: Kerékpár (vége) 13.5 km
-2025-balatonszemes-p49: Kerékpár (vége) 14.5 km
+2016-kaposvar-2575: elhagyva (irreális tempó): Cél (1.8 km)
+2022-gyekenyes-extrememan-51-5-gyekenyes: elhagyva (irreális tempó): Úszás (0.75 km)
+2024-nagyatad-f10: elhagyva (irreális tempó): Cél (2. kör) (5.25 km)
+2024-nagyatad-f21: elhagyva (irreális tempó): Cél (21 km) (5.25 km)
+2024-nagyatad-f42: elhagyva (irreális tempó): Cél (42 km) (5.25 km)

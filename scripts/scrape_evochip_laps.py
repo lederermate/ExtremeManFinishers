@@ -66,18 +66,23 @@ def to_sec(s: str):
 
 
 def disc_of(label: str):
-    l = label.lower()
+    l = label.lower().lstrip("*").strip()
     if "úsz" in l or "swim" in l:
         return "swim"
-    if "kerékp" in l or "kerekp" in l or "bring" in l or "bike" in l or "bicikli" in l:
+    if "kerék" in l or "kerák" in l or "kerekp" in l or "bring" in l or "bike" in l or "bicikli" in l:
         return "bike"
     if "kajak" in l or "kayak" in l:
         return "kayak"
     if "fut" in l or "run" in l:
         return "run"
-    if "dep" in l:
+    if "dep" in l or re.fullmatch(r"[dt]\d", l):
         return "tr"
+    if (l.startswith("cél") or l.startswith("finish")) and "korrig" not in l:
+        return "fin"  # a cél: az utolsó szakasz vége (lásd parse_detail)
     return None
+
+
+NEXT_DISC = {"swim": "bike", "kayak": "bike", "bike": "run"}
 
 
 def list_pids(event: str) -> dict:
@@ -111,6 +116,11 @@ def parse_detail(t: str):
         d = disc_of(label)
         if d is None:  # pl. "Összidő (korrigált)"
             continue
+        if d == "fin":  # "Cél", "Cél (21 km)": az előző szakasz (depó után a következő) vége
+            last = next((p["disc"] for p in reversed(pts) if p["disc"] != "tr"), None)
+            d = (last if pts and pts[-1]["disc"] != "tr" else NEXT_DISC.get(last)) if last else None
+            if d is None:
+                continue
         km = re.match(r"([\d.,]+)\s*km", cells[3])
         rank = re.match(r"\d+", cells[5])
         pts.append({

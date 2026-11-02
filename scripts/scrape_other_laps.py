@@ -10,6 +10,7 @@ Használat: python3 scripts/scrape_other_laps.py   (a legfrissebb versenyekkel k
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +49,7 @@ def main() -> None:
         except Exception as e:  # noqa: BLE001
             print(f"{rc['key']}: lista hiba ({e})", flush=True)
             continue
-        points, athletes = [], {}
+        parsed = {}
         for bib in sorted(bibs):
             if bib not in pids:
                 continue
@@ -58,10 +59,18 @@ def main() -> None:
                 print(f"  ! {rc['key']} #{bib}: {e}", flush=True)
                 continue
             pts = S.parse_detail(t)
-            if not pts:
-                continue
-            if not points:
-                points = [{"label": p["label"], "disc": p["disc"], "km": p["km"]} for p in pts]
+            if pts:
+                parsed[bib] = pts
+        # a mérőpontok listája: a leggyakoribb a legtöbb pontot tartalmazók közül (ha az
+        # első versenyzőnél kimaradt egy mérés, az ne vesszen el mindenkinél)
+        points, athletes = [], {}
+        if parsed:
+            longest = max(len(p) for p in parsed.values())
+            seqs = Counter(tuple(q["label"] for q in p) for p in parsed.values() if len(p) == longest)
+            tmpl = list(seqs.most_common(1)[0][0])
+            src = next(p for p in parsed.values() if [q["label"] for q in p] == tmpl)
+            points = [{"label": q["label"], "disc": q["disc"], "km": q["km"]} for q in src]
+        for bib, pts in parsed.items():
             if [p["label"] for p in pts] != [p["label"] for p in points]:
                 by = {p["label"]: p for p in pts}
                 pts = [by.get(p["label"], {"cum": None, "lap": None, "rank": None}) for p in points]

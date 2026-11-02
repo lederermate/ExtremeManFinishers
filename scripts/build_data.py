@@ -312,6 +312,53 @@ def fill_hidden_km(points, athletes, added):
         points[i]["km"] = round((min(snap, key=lambda s: abs(s - total)) - km_prev) if snap else est, 2)
 
 
+def drop_point(lp, i):
+    lp["points"].pop(i)
+    for a in lp["athletes"].values():
+        if i < len(a):
+            a.pop(i)
+
+
+def drop_empty_points(lp):
+    """Az a mérőpont, amelyen senkinek sincs ideje, nem kell (pl. Nagyatád 2024 f21: "Futás 5.2 km")."""
+    for i in range(len(lp["points"]) - 1, -1, -1):
+        if not any(i < len(a) and a[i] and a[i][0] is not None for a in lp["athletes"].values()):
+            drop_point(lp, i)
+
+
+PLAUSIBLE = {"swim": (1.0, 6.5), "bike": (12, 55), "run": (6, 25), "kayak": (3, 16)}  # km/h
+
+
+def validate_points(lp):
+    """Végső ellenőrzés: ha egy szakaszon a mezőny medián sebessége nem lehet valódi (hibás
+    táv vagy elcsúszott mérőpont-név), a pontot elhagyjuk; a távja a következő, azonos
+    szakaszú pontra kerül (a két mérés közti időt az együtt fedi le). Visszaadja az elhagyottakat."""
+    dropped = []
+    while True:
+        P, worst = lp["points"], None
+        for i, p in enumerate(P):
+            if p["disc"] not in PLAUSIBLE or not p["km"]:
+                continue
+            sp = sorted(p["km"] / ((a[i][0] - (a[i - 1][0] if i else 0)) / 3600) for a in lp["athletes"].values()
+                        if i < len(a) and a[i] and a[i][0] is not None and (i == 0 or (a[i - 1] and a[i - 1][0] is not None))
+                        and a[i][0] > (a[i - 1][0] if i else 0))
+            if len(sp) < 3:
+                continue
+            m = sp[len(sp) // 2]
+            lo, hi = PLAUSIBLE[p["disc"]]
+            bad = max(lo / m, m / hi)
+            if bad > 1 and (worst is None or bad > worst[0]):
+                worst = (bad, i)
+        if worst is None:
+            return dropped
+        i = worst[1]
+        p = P[i]
+        dropped.append(f"{p['label']} ({p['km']} km)")
+        if i + 1 < len(P) and P[i + 1]["disc"] == p["disc"] and P[i + 1]["km"]:
+            P[i + 1]["km"] = round(P[i + 1]["km"] + p["km"], 3)
+        drop_point(lp, i)
+
+
 # Kézi távjavítások (az EvoChip hibás adata): kulcs -> {mérőpont index: szakasz km}
 KM_FIX = {
     "2024-balatonszemes-duatlon-itt": {1: 10.0},  # 3 × 10 km-es kör (ITT30), a 2. kör távja hibásan 3
@@ -330,6 +377,9 @@ def normalize_points_generic(points, athletes=None, key=None):
          amelyiknél a mezőny medián tempója egyenletesebb."""
     for p in points:
         if re.search(r"(?<![\d.])0\.?\s*k[öo]r", p["label"], re.I):
+            p["disc"], p["km"] = "tr", None
+        # a cél pár méterrel az utolsó kör mérése után (pl. Kaposvár 2017): nem szakasz
+        if re.match(r"\*?\s*(cél|finish)", p["label"], re.I) and p["km"] is not None and p["km"] <= 0.3:
             p["disc"], p["km"] = "tr", None
     seg_t = [None] * len(points)
     if athletes:
@@ -917,12 +967,18 @@ def main() -> None:
         rkey = lp["key"]
         if rkey not in rr_by_bib or not lp["points"]:
             continue
+        drop_empty_points(lp)
         added = insert_hidden_points(lp)
         normalize_points_generic(lp["points"], lp["athletes"], rkey)
         fill_hidden_km(lp["points"], lp["athletes"], added)
         if added:
             hidden_log.append(f"{rkey}: " + ", ".join(f"{lp['points'][i]['label']} {lp['points'][i]['km']} km" for i in added))
         fix_lap_gaps(lp["points"])
+        bad_pts = validate_points(lp)
+        if bad_pts:
+            hidden_log.append(f"{rkey}: elhagyva (irreális tempó): " + ", ".join(bad_pts))
+        if not lp["points"]:
+            continue
         med = []
         for i in range(len(lp["points"])):
             v = sorted(a[i][0] for a in lp["athletes"].values() if i < len(a) and a[i][0] is not None)
@@ -972,7 +1028,7 @@ def main() -> None:
         body.append("commit;")
         (ROOT / "supabase" / fname).write_text("\n".join(body) + "\n", encoding="utf-8")
     print(f"További versenyek köztes mérőpontjai: {len(have)} verseny, {n_other} versenyző")
-    print(f"Rejtett mérőpontok visszaállítva: {len(hidden_log)} versenyben")
+    print(f"Mérőpont-javítások (data/hidden_points.txt): {len(hidden_log)}")
     (DATA / "hidden_points.txt").write_text("\n".join(hidden_log) + "\n", encoding="utf-8")
     # a versenylistában jelöljük, melyikhez van köridő
     oth = json.loads((DATA / "other.json").read_text(encoding="utf-8"))
