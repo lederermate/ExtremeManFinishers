@@ -89,7 +89,7 @@ def main() -> None:
     titles = event_titles([ev for _, ev in nagyatad] + [ev for _, ev, _ in others])
 
     if CONTACT_EMAIL:
-        contact = f'e-mailben: <a href="mailto:{esc(CONTACT_EMAIL)}">{esc(CONTACT_EMAIL)}</a>'
+        contact = f'e-mailben, a <a href="mailto:{esc(CONTACT_EMAIL)}">{esc(CONTACT_EMAIL)}</a> címre'
     else:
         contact = (f'a {ext("https://github.com/lederermate", "GitHub-profilon")} keresztül, vagy a projekt '
                    f'{ext(REPO + "/issues", "hibajegy-oldalán")} (ez utóbbi nyilvános, ezért ott ne adj meg több személyes adatot, mint amennyi a kéréshez kell)')
@@ -152,7 +152,7 @@ def main() -> None:
     <section class="card prose" id="kerelem">
       <h2>Javítás, eltávolítás, tiltakozás</h2>
       <p>Ha szerepelsz az oldalon, kérheted az adataid javítását, a születési éved / egyesületed elrejtését vagy a
-        teljes eltávolításukat, illetve tiltakozhatsz az adatkezelés ellen. A kérést {contact}.
+        teljes eltávolításukat, illetve tiltakozhatsz az adatkezelés ellen. A kérést {contact} küldheted el.
         Írd meg, melyik adatlapról van szó (a link elég); a kérést indokolatlan késedelem nélkül, legkésőbb egy hónapon belül teljesítjük.</p>
       <p>Az eltávolítás ezt az oldalt érinti – az eredeti eredménylistákon (lásd a forrásokat) az adatok a szervezőknél
         maradnak, azok módosítását náluk lehet kérni. Panasszal a Nemzeti Adatvédelmi és Információszabadság Hatósághoz
