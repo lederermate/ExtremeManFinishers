@@ -927,7 +927,32 @@
       kayak: (t, km) => t / km,                // mp / km
     };
     const personOfId = (id) => M.A.get(id) || (opts.people && opts.people.get(id)) || null;
-    const sexWord = a.sex === 'F' ? 'a nők között' : a.sex === 'M' ? 'a férfiak között' : 'nemenként';
+    const sexWord = a.sex === 'F' ? 'a célba érkező nők között' : a.sex === 'M' ? 'a célba érkező férfiak között' : 'a célba érkezők között';
+
+    // Helyezés és előzések ugyanabból az adatból: az azonos nemű célba érkezők köztes
+    // idejéből (az EvoChip helyezése néha korosztályos, vagy a feladókat is számolja).
+    // Ha valakinek hiányzik egy mérőpontja (kihagyta a szőnyeget), a két szomszédos
+    // mért ideje közé becsüljük, a mezőny medián menetidejének arányában.
+    const medT = P.map((_, i) => median(others.map((o) => o[i] && o[i][0]).filter((v) => v != null)));
+    const filled = (o) => {
+      const t = P.map((_, i) => (o[i] && o[i][0] != null ? o[i][0] : null));
+      for (let i = 0; i < t.length; i++) {
+        if (t[i] != null) continue;
+        const j = i - 1;
+        let k = i + 1;
+        while (k < t.length && t[k] == null) k++;
+        if (k >= t.length || (j >= 0 && t[j] == null)) continue;
+        const t0 = j >= 0 ? t[j] : 0, m0 = j >= 0 ? medT[j] : 0;
+        if (medT[i] == null || medT[k] == null || m0 == null || medT[k] <= m0) continue;
+        t[i] = t0 + (t[k] - t0) * (medT[i] - m0) / (medT[k] - m0);
+      }
+      return t;
+    };
+    const rivals = Object.entries(d.athletes)
+      .filter(([aid]) => Number(aid) !== a.id && (!a.sex || (personOfId(Number(aid)) || {}).sex === a.sex))
+      .map(([aid, o]) => [Number(aid), filled(o)]);
+    const myT = (i) => (mine[i] && mine[i][0] != null ? mine[i][0] : null);
+    const rankAt = (i) => (myT(i) == null ? null : 1 + rivals.filter(([, t]) => t[i] != null && t[i] < myT(i)).length);
 
     // a versenyen előforduló szakaszok, az első előfordulás sorrendjében (duatlonnál
     // futás – kerékpár – futás, quadrathlonnál kajak is); a táv a mérőpontokból jön
@@ -988,7 +1013,7 @@
           if (!p) return null;
           const r = ref.find((q) => q.x === x);
           const unit = sp.disc === 'bike' ? ' km/h' : sp.disc === 'swim' ? ' /100 m' : ' /km';  // futás, kajak: /km
-          const rank = mine[p.g.end] && mine[p.g.end][2];
+          const rank = rankAt(p.g.end);
           return `<div class="tt-title">${esc(p.g.label)} <span class="muted">(${p.g.km.toFixed(2).replace('.', ',')} km)</span></div>
             ${ttRow('Szakaszidő', fmt(p.t), sp.color)}
             ${ttRow(sp.disc === 'bike' ? 'Sebesség' : 'Tempó', sp.fmt(p.y) + unit)}
@@ -999,7 +1024,7 @@
     }
 
     // a verseny lefolyása: helyezés az eltelt idő függvényében
-    const race = P.map((p, i) => (mine[i] && mine[i][0] && mine[i][2] ? { x: mine[i][0] / 3600, y: mine[i][2], i } : null)).filter(Boolean);
+    const race = P.map((p, i) => (myT(i) ? { x: myT(i) / 3600, y: rankAt(i), i } : null)).filter(Boolean);
     const end = race.length ? race[race.length - 1].x : 1;
     // háttérsávok: az egymást követő azonos szakaszú mérőpontok blokkjai
     const timeAt = (i) => (i < 0 ? 0 : mine[i] && mine[i][0] != null ? mine[i][0] / 3600 : null);
@@ -1022,18 +1047,17 @@
     const ranks = race.map((p) => p.y);
     // Előzések két egymást követő mérőpont között: az azonos nemű célba érkezők
     // közül ki volt előtted az előző ponton és mögötted ezen (megelőzted), ill. fordítva.
-    const rivals = Object.entries(d.athletes).filter(([aid]) => Number(aid) !== a.id &&
-      (!a.sex || (personOfId(Number(aid)) || {}).sex === a.sex));
+    // (Ugyanazokból az időkből, mint a helyezés, így a változás = megelőzted − megelőzött.)
     const passes = race.map((p, k) => {
       if (!k) return null;
       const ip = race[k - 1].i, i = p.i;
-      const me0 = mine[ip][0], me1 = mine[i][0];
+      const me0 = myT(ip), me1 = myT(i);
       const up = [], down = [];
-      for (const [aid, o] of rivals) {
-        const t0 = o[ip] && o[ip][0], t1 = o[i] && o[i][0];
-        if (t0 == null || t1 == null) continue;
-        if (t0 < me0 && t1 > me1) up.push({ aid: Number(aid), t: t1 });
-        else if (t0 > me0 && t1 < me1) down.push({ aid: Number(aid), t: t1 });
+      for (const [aid, t] of rivals) {
+        const t0 = t[ip], t1 = t[i];
+        const ahead0 = t0 != null && t0 < me0, ahead1 = t1 != null && t1 < me1;
+        if (ahead0 && !ahead1) up.push({ aid, t: t1 ?? Infinity });
+        else if (!ahead0 && ahead1) down.push({ aid, t: t1 });
       }
       up.sort((x, y) => x.t - y.t); down.sort((x, y) => x.t - y.t);
       return { from: P[ip].label, to: P[i].label, up, down };
@@ -1050,7 +1074,7 @@
           <span class="muted">${fmt(mine[race[k - 1].i][0])} → ${fmt(mine[race[k].i][0])} · helyezés ${race[k - 1].y}. → ${race[k].y}.</span></div>
         <p><span class="pass-up">▲ Megelőzted (${ps.up.length})</span>${ps.up.length ? ps.up.map(nameLink).join(', ') : '<span class="muted">senkit</span>'}</p>
         <p><span class="pass-down">▼ Megelőzött (${ps.down.length})</span>${ps.down.length ? ps.down.map(nameLink).join(', ') : '<span class="muted">senki</span>'}</p>
-        <p class="chart-note">Az azonos nemű célba érkezők köztes ideje alapján; a nevekre kattintva ${opts.raceKey ? 'az adatlapjuk' : `az ő ugyanezen évi (${year}) versenyük`} nyílik meg. Másik szakaszhoz kattints egy másik pontra.</p>`;
+        <p class="chart-note">Az azonos nemű célba érkezők köztes ideje alapján (ha valakinek egy mérőpontja hiányzik, a szomszédos pontjai közé becsülve); a nevekre kattintva ${opts.raceKey ? 'az adatlapjuk' : `az ő ugyanezen évi (${year}) versenyük`} nyílik meg. Másik szakaszhoz kattints egy másik pontra.</p>`;
     };
     // kezdetben a legtöbb előzéssel járó szakasz látszik
     let startK = 0;
