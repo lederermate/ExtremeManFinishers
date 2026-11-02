@@ -162,6 +162,11 @@ Kézi javítás a `data/overrides.json`-ban:
 
 ## Források
 
+A teljes, linkelt forráslista és az adatvédelmi tájékoztató: `adatvedelem.html`
+(generálja: `python3 scripts/build_adatvedelem.py` – új év vagy esemény hozzáadása után futtasd újra;
+az adatkérésekhez szóló e-mail címet a szkript elején, a `CONTACT_EMAIL`-ben lehet megadni).
+
+
 - Finisherek 1990–2025: [extremetour.hu](https://www.extremetour.hu/finisherekabc)
 - Részidők 2022–2026, eredmények 2026: [EvoChip](https://www.evochip.hu/results/)
 - Betűtípusok: Oswald, Source Sans 3 (SIL Open Font License, `fonts/`)
