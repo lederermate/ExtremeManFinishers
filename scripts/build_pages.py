@@ -378,6 +378,7 @@ def main() -> None:
         jsonld=[crumbs(("Finisherek", SITE), ("Rekordok", SITE + "rekordok/"))],
     ), encoding="utf-8")
     urls.append((SITE + "rekordok/", "0.7"))
+    urls.append((SITE + "adatvedelem.html", "0.3"))  # scripts/build_adatvedelem.py generálja
 
     # ---------------- 404.html: ismeretlen cím esetén is az app töltődik be ----------------
     from urllib.parse import urlparse

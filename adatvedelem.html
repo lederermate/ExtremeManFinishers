@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="./">
+  <title>Adatvédelem és források – eXtremeMan Nagyatád finisherek</title>
+  <meta name="description" content="Az oldal kizárólag nyilvánosan elérhető versenyeredményekből dolgozik (extremetour.hu, EvoChip). Milyen adatok szerepelnek, honnan, és hogyan kérheted a javításukat vagy eltávolításukat.">
+  <link rel="canonical" href="https://lederermate.github.io/ExtremeManFinishers/adatvedelem.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="eXtremeMan Nagyatád finisherek">
+  <meta property="og:locale" content="hu_HU">
+  <meta property="og:title" content="Adatvédelem és források – eXtremeMan Nagyatád finisherek">
+  <meta property="og:description" content="Az oldal kizárólag nyilvánosan elérhető versenyeredményekből dolgozik (extremetour.hu, EvoChip). Milyen adatok szerepelnek, honnan, és hogyan kérheted a javításukat vagy eltávolításukat.">
+  <meta property="og:url" content="https://lederermate.github.io/ExtremeManFinishers/adatvedelem.html">
+  <meta property="og:image" content="https://lederermate.github.io/ExtremeManFinishers/images/og.jpg">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Finisherek", "item": "https://lederermate.github.io/ExtremeManFinishers/"}, {"@type": "ListItem", "position": 2, "name": "Adatvédelem és források", "item": "https://lederermate.github.io/ExtremeManFinishers/adatvedelem.html"}]}</script>
+  <style>
+    .prose p, .prose ul { max-width: 75ch; }
+    .prose ul { padding-left: 1.2em; margin: 10px 0; }
+    .prose li { margin: 4px 0; }
+    .prose h2 { margin-bottom: 10px; }
+    .prose a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+    .prose h3 { font-size: 16px; margin: 22px 0 6px; }
+    .src-label { margin-bottom: 4px; font-weight: 600; }
+    .src-years { display: flex; flex-wrap: wrap; gap: 6px 12px; font-variant-numeric: tabular-nums; }
+    .src-cols { columns: 2 260px; }
+    .src-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 20px; }
+    .src-grid h4 { margin: 12px 0 2px; font-size: 14px; }
+    .src-grid ul { list-style: none; padding: 0; margin: 0; }
+    .src-grid li { margin: 3px 0; }
+    .updated { margin-top: 20px; font-size: 13px; }
+  </style>
+  <meta name="theme-color" content="#e10600">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/source-sans-3-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/oswald-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // téma: a mentett választás, különben a rendszer beállítása
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 52 L26 14 L36 34 L44 24 L58 52 Z"/></svg>
+        <span><b>eXtremeMan</b> Nagyatád <em>finisherek</em></span>
+      </a>
+      <nav class="nav" aria-label="Fő menü">
+        <a href="./" data-nav="list">Finisherek</a>
+        <a href="evek/" data-nav="years">Évek</a>
+        <a href="rekordok/" data-nav="records">Rekordok</a>
+        <a href="versenyek/" data-nav="races">Versenyek</a>
+      </nav>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Világos / sötét téma váltása" title="Téma váltása">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  
+
+  <main id="app" class="wrap" tabindex="-1">
+    
+    <div class="page-head">
+      <div class="eyebrow"><a href="./">← Finisherek</a></div>
+      <h1>Adatvédelem és források</h1>
+      <p class="lead">Ez az oldal <b>kizárólag nyilvánosan elérhető</b>, a versenyek szervezői és időmérői által
+        már közzétett eredményekből dolgozik. Minden adat forrását alább, linkkel együtt felsoroljuk.
+        A látogatókról nem gyűjtünk adatot.</p>
+    </div>
+
+    <section class="card prose">
+      <h2>Röviden</h2>
+      <ul>
+        <li>Az eredmények <b>nyilvános eredménylistákból</b> származnak (extremetour.hu, EvoChip) – új, nem nyilvános adatot nem gyűjtünk, és senkitől nem kérünk be adatot.</li>
+        <li>Az oldal célja a verseny történetének és a célba érkezők teljesítményének bemutatása (sporttörténeti statisztika). Nem kereskedelmi célú, nincs rajta hirdetés.</li>
+        <li>Nincs regisztráció, nincsenek sütik, nincs látogatottságmérés vagy követés.</li>
+        <li>Ha szerepelsz az oldalon, és szeretnéd, hogy az adataidat javítsuk vagy eltávolítsuk, <a href="adatvedelem.html#kerelem">írj nekünk</a>.</li>
+      </ul>
+    </section>
+
+    <section class="card prose">
+      <h2>Milyen adatok szerepelnek az oldalon?</h2>
+      <p>Csak az, ami a forrásként megjelölt nyilvános eredménylistákban is szerepel:</p>
+      <ul>
+        <li>név (a forrásban közölt írásmóddal),</li>
+        <li>születési év, nem és egyesület – ahol a forrás közli (az EvoChip-listákban 2015-től),</li>
+        <li>célidő, helyezés, részidők és köztes mérőpontok (úszás, depók, kerékpár, futás),</li>
+        <li>a fentiekből számolt statisztikák (pl. legjobb idő, célba érések száma, helyezés a mezőnyben, trendgrafikon).</li>
+      </ul>
+      <p>Nem szerepel: elérhetőség (cím, telefon, e-mail), licencszám, pontos születési dátum vagy bármilyen más,
+        az eredménylistákon túli adat. A versenyzők párosítása (ugyanaz a személy különböző években) a név, a születési év
+        és a célidő alapján, a nyilvános adatokból történik.</p>
+    </section>
+
+    <section class="card prose">
+      <h2>Mire használjuk, és milyen alapon?</h2>
+      <p>A nyilvánosan közzétett versenyeredményeket egy helyen, kereshető formában tesszük elérhetővé, hogy a
+        versenyzők, szurkolók és a sportág iránt érdeklődők visszanézhessék az eredményeket és a fejlődést.
+        Az adatok kezelésének jogalapja az általános adatvédelmi rendelet (GDPR) 6. cikk (1) bekezdés f) pontja szerinti
+        jogos érdek: a már nyilvános sporteredmények sporttörténeti célú, összesített bemutatása.
+        Az adatokat nem adjuk át senkinek, nem használjuk marketingre vagy profilalkotásra.</p>
+    </section>
+
+    <section class="card prose" id="kerelem">
+      <h2>Javítás, eltávolítás, tiltakozás</h2>
+      <p>Ha szerepelsz az oldalon, kérheted az adataid javítását, a születési éved / egyesületed elrejtését vagy a
+        teljes eltávolításukat, illetve tiltakozhatsz az adatkezelés ellen. A kérést a <a href="https://github.com/lederermate" target="_blank" rel="noopener">GitHub-profilon</a> keresztül, vagy a projekt <a href="https://github.com/lederermate/ExtremeManFinishers/issues" target="_blank" rel="noopener">hibajegy-oldalán</a> (ez utóbbi nyilvános, ezért ott ne adj meg több személyes adatot, mint amennyi a kéréshez kell).
+        Írd meg, melyik adatlapról van szó (a link elég); a kérést indokolatlan késedelem nélkül, legkésőbb egy hónapon belül teljesítjük.</p>
+      <p>Az eltávolítás ezt az oldalt érinti – az eredeti eredménylistákon (lásd a forrásokat) az adatok a szervezőknél
+        maradnak, azok módosítását náluk lehet kérni. Panasszal a Nemzeti Adatvédelmi és Információszabadság Hatósághoz
+        (<a href="https://www.naih.hu/" target="_blank" rel="noopener">naih.hu</a>) is fordulhatsz.</p>
+    </section>
+
+    <section class="card prose">
+      <h2>A látogatókról</h2>
+      <ul>
+        <li><b>Nincsenek sütik és nincs követés</b> (nincs Google Analytics, közösségi gomb, hirdetés).</li>
+        <li>A világos/sötét téma választása csak a <b>saját böngésződben</b> tárolódik (localStorage), hozzánk nem jut el.</li>
+        <li>A betűtípusok és a képek erről az oldalról töltődnek be, nem külső szolgáltatótól.</li>
+        <li>Tárhely: az oldalt a <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> szolgálja ki; a GitHub technikai
+          naplót vezethet a kérésekről (pl. IP-cím) – lásd a <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub adatvédelmi nyilatkozatát</a>.</li>
+        <li>Adatbázis: az eredményeket a böngésződ a <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a> szolgáltatásból tölti le
+          (ha nem érhető el, az oldalba épített pillanatképből). Ilyenkor a Supabase is technikai naplót vezethet.</li>
+        <li>A külső oldalakra (források, fotók) mutató linkek csak akkor nyílnak meg, ha rájuk kattintasz.</li>
+      </ul>
+    </section>
+
+    <section class="card prose" id="forrasok">
+      <h2>Források – teljes lista (95 link)</h2>
+      <p>Az adatok a lenti nyilvános oldalakról származnak. Ahol a források eltérnek, az időmérő (EvoChip) adatait
+        tekintjük pontosabbnak; a párosítások és javítások a projekt nyilvános
+        <a href="https://github.com/lederermate/ExtremeManFinishers" target="_blank" rel="noopener">forráskódjában</a> is ellenőrizhetők.</p>
+
+      <h3>1. extremetour.hu – Nagyatád teljes táv, célba érkezők 1990–2025</h3>
+      <p>Az eXtremeMan / Extremetour szervezők nyilvános finisher-nyilvántartása (név, helyezés, célidő).</p>
+      <ul>
+        <li><a href="https://www.extremetour.hu/finisherekabc" target="_blank" rel="noopener">Finisherek ABC sorrendben</a> – https://www.extremetour.hu/finisherekabc</li>
+        <li><a href="https://www.extremetour.hu/finisherekevlista" target="_blank" rel="noopener">Finisherek évenként – évlista</a> – https://www.extremetour.hu/finisherekevlista</li>
+      </ul>
+      <p class="src-label">Évenkénti eredménylisták:</p>
+      <p class="src-years"><a href="https://www.extremetour.hu/finisherekevben/1990" target="_blank" rel="noopener">1990</a> <a href="https://www.extremetour.hu/finisherekevben/1991" target="_blank" rel="noopener">1991</a> <a href="https://www.extremetour.hu/finisherekevben/1992" target="_blank" rel="noopener">1992</a> <a href="https://www.extremetour.hu/finisherekevben/1993" target="_blank" rel="noopener">1993</a> <a href="https://www.extremetour.hu/finisherekevben/1994" target="_blank" rel="noopener">1994</a> <a href="https://www.extremetour.hu/finisherekevben/1995" target="_blank" rel="noopener">1995</a> <a href="https://www.extremetour.hu/finisherekevben/1996" target="_blank" rel="noopener">1996</a> <a href="https://www.extremetour.hu/finisherekevben/1997" target="_blank" rel="noopener">1997</a> <a href="https://www.extremetour.hu/finisherekevben/1998" target="_blank" rel="noopener">1998</a> <a href="https://www.extremetour.hu/finisherekevben/1999" target="_blank" rel="noopener">1999</a> <a href="https://www.extremetour.hu/finisherekevben/2000" target="_blank" rel="noopener">2000</a> <a href="https://www.extremetour.hu/finisherekevben/2001" target="_blank" rel="noopener">2001</a> <a href="https://www.extremetour.hu/finisherekevben/2002" target="_blank" rel="noopener">2002</a> <a href="https://www.extremetour.hu/finisherekevben/2003" target="_blank" rel="noopener">2003</a> <a href="https://www.extremetour.hu/finisherekevben/2004" target="_blank" rel="noopener">2004</a> <a href="https://www.extremetour.hu/finisherekevben/2005" target="_blank" rel="noopener">2005</a> <a href="https://www.extremetour.hu/finisherekevben/2006" target="_blank" rel="noopener">2006</a> <a href="https://www.extremetour.hu/finisherekevben/2007" target="_blank" rel="noopener">2007</a> <a href="https://www.extremetour.hu/finisherekevben/2008" target="_blank" rel="noopener">2008</a> <a href="https://www.extremetour.hu/finisherekevben/2009" target="_blank" rel="noopener">2009</a> <a href="https://www.extremetour.hu/finisherekevben/2010" target="_blank" rel="noopener">2010</a> <a href="https://www.extremetour.hu/finisherekevben/2011" target="_blank" rel="noopener">2011</a> <a href="https://www.extremetour.hu/finisherekevben/2012" target="_blank" rel="noopener">2012</a> <a href="https://www.extremetour.hu/finisherekevben/2013" target="_blank" rel="noopener">2013</a> <a href="https://www.extremetour.hu/finisherekevben/2014" target="_blank" rel="noopener">2014</a> <a href="https://www.extremetour.hu/finisherekevben/2015" target="_blank" rel="noopener">2015</a> <a href="https://www.extremetour.hu/finisherekevben/2016" target="_blank" rel="noopener">2016</a> <a href="https://www.extremetour.hu/finisherekevben/2017" target="_blank" rel="noopener">2017</a> <a href="https://www.extremetour.hu/finisherekevben/2018" target="_blank" rel="noopener">2018</a> <a href="https://www.extremetour.hu/finisherekevben/2019" target="_blank" rel="noopener">2019</a> <a href="https://www.extremetour.hu/finisherekevben/2020" target="_blank" rel="noopener">2020</a> <a href="https://www.extremetour.hu/finisherekevben/2021" target="_blank" rel="noopener">2021</a> <a href="https://www.extremetour.hu/finisherekevben/2022" target="_blank" rel="noopener">2022</a> <a href="https://www.extremetour.hu/finisherekevben/2023" target="_blank" rel="noopener">2023</a> <a href="https://www.extremetour.hu/finisherekevben/2024" target="_blank" rel="noopener">2024</a> <a href="https://www.extremetour.hu/finisherekevben/2025" target="_blank" rel="noopener">2025</a></p>
+
+      <h3>2. EvoChip – Nagyatád teljes táv, eredmények és részidők 2015–2026</h3>
+      <p>Az <a href="https://www.evochip.hu/" target="_blank" rel="noopener">EvoChip Timing Team</a> hivatalos időmérő nyilvános eredménylistái
+        (célidő, helyezés, születési év, nem, egyesület, részidők és köztes mérőpontok; 2026-ban a teljes eredménylista is innen származik).</p>
+      <ul class="src-cols">
+        <li>2015: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad15EAr&amp;lang=hu" target="_blank" rel="noopener">XXVI. Hosszútávú Triatlon OB Nagyatád</a></li><li>2016: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad16DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2016</a></li><li>2017: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad17EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2017</a></li><li>2018: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad18EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2018</a></li><li>2019: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad19DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2019</a></li><li>2020: <a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManNagyatad20VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2020</a></li><li>2021: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad21DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2021</a></li><li>2022: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad22VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2022</a></li><li>2023: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad23VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2023</a></li><li>2024: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad24VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2024</a></li><li>2025: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad25VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2025</a></li><li>2026: <a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad26VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2026</a></li>
+      </ul>
+
+      <h3>3. EvoChip – további eXtremeMan versenyek (44 esemény)</h3>
+      <p>A „Versenyek” menüpont és a versenyzői adatlapok „További eXtremeMan versenyek” táblázata
+        (felnőtt egyéni versenyek; a váltók és a gyermek-, serdülő-, ifjúsági és junior kategóriák nem szerepelnek).</p>
+      <div class="src-grid"><div class="src-year"><h4>2015</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeMan113Kaposvar15EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 Kaposvár 2015</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeMan2575Kaposvar15EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75 Kaposvár 2015</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeManVelence15EAr&amp;lang=hu" target="_blank" rel="noopener">II. ExtremeMan 51.5 Velence</a></li></ul></div><div class="src-year"><h4>2016</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeMan113Kaposvar16EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113, Atom 150+ Kaposvár 2016</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeMan2575Kaposvar16EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75, Junior 13 (Kaposvár)</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=NagyatadAqua16DAd&amp;lang=hu" target="_blank" rel="noopener">Nagyatád Aquatlon</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeManVelence16EAr&amp;lang=hu" target="_blank" rel="noopener">II. ExtremeMan Velence 51.5</a></li></ul></div><div class="src-year"><h4>2017</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeMan113Kaposvar17EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 (Kaposvár)</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeMan2575Kaposvar17EAr&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75 (Kaposvár)</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad_Aquatlon17HZt&amp;lang=hu" target="_blank" rel="noopener">Nagyatád Aquatlon 2017</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtrememanVelence17DSr&amp;lang=hu" target="_blank" rel="noopener">ExtremeMan Velence 51.5 2017</a></li></ul></div><div class="src-year"><h4>2018</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeMan257518Hfa&amp;lang=hu" target="_blank" rel="noopener">ExtremeMan Kaposvár Quadrathlon, Triathlon 2018</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtrememan113KaposvarSAm18&amp;lang=hu" target="_blank" rel="noopener">eXtrememan113 Kaposvár - 2018</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=AquatlonNagyatad18SAm&amp;lang=hu" target="_blank" rel="noopener">Aquatlon Nagyatád 2018</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagocs18HSs&amp;lang=hu" target="_blank" rel="noopener">ExtremeMan Nágocs</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=SzfvXtremeManTri18SAm&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 51.5 Székesfehérvár</a></li></ul></div><div class="src-year"><h4>2019</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtrMan113Kaposvar19VIn&amp;lang=hu" target="_blank" rel="noopener">ExtremeMan 113 Kaposvár 2019</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtrManQ30T2575Kaposvar19VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Q30 Kaposvár 2019</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtremeManSzekesfehervar19VIn&amp;lang=hu" target="_blank" rel="noopener">ExtremeMan Székesfehérvár 2019</a></li></ul></div><div class="src-year"><h4>2020</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=ExtrManQ30Kaposvar20VIn&amp;lang=hu" target="_blank" rel="noopener">ExtremeMan Kaposvár 2020</a></li></ul></div><div class="src-year"><h4>2021</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManKaposvar21DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75 Kaposvár 2021</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManKaposvarKozep21DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 Kaposvár 2021</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManSzekesfehervar21DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Székesfehérvár 2021</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=TabDuatlon21DAd&amp;lang=hu" target="_blank" rel="noopener">Tab - eXtremeManD80 Középtávú Duatlon OB 2021</a></li></ul></div><div class="src-year"><h4>2022</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=Gyekenyes51522VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 51.5 Gyékényes 2022</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManKaposvar22VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 Kaposvár 2022</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad22VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2022</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=TabDuatlon22VIn&amp;lang=hu" target="_blank" rel="noopener">Tab - eXtremeManD80 Középtávú Duatlon OB 2022</a></li></ul></div><div class="src-year"><h4>2023</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad23VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2023</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=TabDuatlon23VIn&amp;lang=hu" target="_blank" rel="noopener">Tab - eXtremeManD80 Középtávú Duatlon OB 2023</a></li></ul></div><div class="src-year"><h4>2024</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=eManDuaBszemes24VIn&amp;lang=hu" target="_blank" rel="noopener">Balatonszemes - eXtremeManD80 Középtávú Duatlon OB 2024</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremen24HFa&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75, 51.5 és Q30 Gyékényes 2024</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManKaposvar24VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 Kaposvár 2024</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad24VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2024</a></li></ul></div><div class="src-year"><h4>2025</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=eManDuaBszemes25VIn&amp;lang=hu" target="_blank" rel="noopener">Balatonszemes - eXtremeManD80 Középtávú Duatlon OB 2025</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeManBSZ25VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 Balatonszemes 2025</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=GyekenyesTri25HFa&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75, 51.5 és Q61.5 Gyékényes 2025</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=KaposvarTri25HFa&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan25.75 - Kaposvár 2025</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad25VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2025</a></li></ul></div><div class="src-year"><h4>2026</h4><ul><li><a href="https://www.evochip.hu/results/result.php?eventid=eManDuaBszemes26VIn&amp;lang=hu" target="_blank" rel="noopener">Balatonszemes - eXtremeManD80 Középtávú Duatlon OB 2026</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=eXtremeMan11326HFa&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 113 Balatonszemes 2026</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=GyekenyesTri26DAd&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan 25.75, 51.5 és Q61.5 Gyékényes 2026</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=KaposvarTri26HFa&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan25.75 - Kaposvár 2026</a></li><li><a href="https://www.evochip.hu/results/result.php?eventid=Nagyatad26VIn&amp;lang=hu" target="_blank" rel="noopener">eXtremeMan Nagyatád 2026</a></li></ul></div></div>
+
+      <h3>4. Fotók</h3>
+      <p>A fejlécfotók a szervező <a href="https://www.extrememan.hu/" target="_blank" rel="noopener">extrememan.hu</a> oldalán közzétett versenyfotók,
+        forrásmegjelöléssel. Ha valamelyik fotón szerepelsz, és szeretnéd, hogy lecseréljük, <a href="adatvedelem.html#kerelem">szólj</a>.</p>
+    </section>
+
+    <p class="muted updated">Utolsó frissítés: 2026-11-02</p>
+  </main>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+
+  <footer class="footer">
+    <div class="wrap">
+      
+      <p>Teljes táv (3,8 km úszás · 180 km kerékpár · 42,2 km futás), egyéni célba érkezők.
+        Források: <a href="https://www.extremetour.hu/finisherekabc" target="_blank" rel="noopener">extremetour.hu</a> (1990–2025),
+        <a href="https://www.evochip.hu/results/" target="_blank" rel="noopener">EvoChip</a> (részidők 2015-től, 2026).
+        Fotók: <a href="https://www.extrememan.hu/" target="_blank" rel="noopener">extrememan.hu</a>.
+        · <a href="adatvedelem.html">Adatvédelem és források</a></p>
+      
+    </div>
+  </footer>
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      const root = document.documentElement;
+      const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme = dark ? 'light' : 'dark';
+      try { localStorage.setItem('theme', root.dataset.theme); } catch (e) { /* nem baj */ }
+    });
+  </script>
+</body>
+</html>
