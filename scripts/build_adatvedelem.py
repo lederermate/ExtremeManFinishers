@@ -25,7 +25,7 @@ URL = SITE + "adatvedelem.html"
 REPO = "https://github.com/lederermate/ExtremeManFinishers"
 # Ha van e-mail cím az adatkérésekhez, ide írd (pl. "valaki@example.com");
 # üresen a GitHub-on keresztüli kapcsolatfelvétel jelenik meg.
-CONTACT_EMAIL = ""
+CONTACT_EMAIL = "lederer.mate@gmail.com"
 
 ET = "https://www.extremetour.hu"
 EVO = "https://www.evochip.hu/results/result.php"
