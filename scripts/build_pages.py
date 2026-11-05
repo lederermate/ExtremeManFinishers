@@ -202,6 +202,10 @@ def main() -> None:
             "url": SITE, "inLanguage": "hu", "temporalCoverage": f"{years[0]}/{years[-1]}",
             "spatialCoverage": "Nagyatád, Magyarország",
             "creditText": "Források: extremetour.hu, EvoChip Timing Team",
+            "creator": {"@type": "Person", "name": "Léderer Máté"},
+            # az adatok nyilvános forrásokból származnak – a felhasználás feltételei a forrásoldalon
+            "license": SITE + "adatvedelem.html#forrasok",
+            "isAccessibleForFree": True,
         }],
     ), encoding="utf-8")
 
